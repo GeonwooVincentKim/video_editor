@@ -57,6 +57,7 @@ class VideoEditorController extends ChangeNotifier with WidgetsBindingObserver {
   int _rotation = 0;
   bool isTrimming = false;
   bool isCropping = false;
+  bool isCovering = false;
   double _minTrim = 0.0;
   double _maxTrim = 1.0;
   Offset _minCrop = Offset.zero;
@@ -64,6 +65,8 @@ class VideoEditorController extends ChangeNotifier with WidgetsBindingObserver {
 
   Duration _trimEnd = Duration.zero;
   Duration _trimStart = Duration.zero;
+
+  double _coverPos = 0.0;
   VideoPlayerController _video;
 
   //----------------//
@@ -176,6 +179,20 @@ class VideoEditorController extends ChangeNotifier with WidgetsBindingObserver {
 
   ///Get the **VideoPosition** (Range is `0.0` to `1.0`).
   double get trimPosition =>
+      videoPosition.inMilliseconds / videoDuration.inMilliseconds;
+
+  //----------//
+  //VIDEO COVER//
+  //----------//
+
+  ///Update coverPos. Argument range are `0.0` to `1.0`.
+  void updateCover(double coverPos) {
+    _coverPos = coverPos;
+    notifyListeners();
+  }
+
+  ///Get the **VideoPosition** (Range is `0.0` to `1.0`).
+  double get coverPosition =>
       videoPosition.inMilliseconds / videoDuration.inMilliseconds;
 
   ///Don't touch this >:)

@@ -4,3 +4,4 @@ export 'utils/styles.dart';
 export 'utils/controller.dart';
 export 'widgets/crop/crop_grid.dart';
 export 'widgets/trim/trim_slider.dart';
+export 'widgets/cover/cover_slider.dart';
