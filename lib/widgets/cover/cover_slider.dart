@@ -47,7 +47,6 @@ class _CoverSliderState extends State<CoverSlider> {
     final double pos = details.localPosition.dx;
     final double max = _rect.right;
     final double min = _rect.left;
-    final double progressCover = _getCoverPosition();
     final List<double> minMargin = [min - margin, min + margin];
     final List<double> maxMargin = [max - margin, max + margin];
 
@@ -61,6 +60,7 @@ class _CoverSliderState extends State<CoverSlider> {
     final Offset delta = details.delta;
     final pos = _rect.topLeft + delta;
     _changeCoverRect(left: pos.dx);
+    _controllerSeekTo(pos.dx);
   }
 
   void _onHorizontalDragEnd(_) {
@@ -91,9 +91,6 @@ class _CoverSliderState extends State<CoverSlider> {
       );
     }
 
-    print("COVER SLIDER");
-    print(widget.height);
-
     if (_rect == null) {
       _rect = Rect.fromLTWH(
         0.0,
@@ -114,6 +111,13 @@ class _CoverSliderState extends State<CoverSlider> {
     );
   }
 
+  void _controllerRunning(bool play) async {
+    if (play)
+      await _controller.play();
+    else
+      await _controller.pause();
+  }
+
   void _updateControllerCover() {
     final double width = _layout.width;
     widget.controller.updateCover(_rect.left / width);
@@ -121,6 +125,7 @@ class _CoverSliderState extends State<CoverSlider> {
 
   void _updateControllerIsCovering(bool value) {
     widget.controller.isCovering = value;
+    _controllerRunning(value);
   }
 
   double _getCoverPosition() {
