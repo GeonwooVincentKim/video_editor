@@ -39,11 +39,9 @@ class _CoverSliderState extends State<CoverSlider> {
   void initState() {
     _controller = widget.controller.video;
 
-    /*
-    // Init to cover position, the video shouldn't be playing on this widget
-    _controllerSeekTo(widget.controller.coverPosition);
-    _controller.pause();
-    */
+    // TODO the video shouldn't be playing on this widget
+    // if (widget.controller.isPlaying) _controller.pause();
+
     super.initState();
   }
 
@@ -95,11 +93,12 @@ class _CoverSliderState extends State<CoverSlider> {
     void _normalRect() {
       _rect = Rect.fromPoints(
         Offset(widget.controller.coverPosition * _layout.width, 0.0),
-        Offset(_rectWidth, widget.height),
+        Offset((widget.controller.coverPosition * _layout.width) + _rectWidth,
+            widget.height),
       );
     }
 
-    if (_rect == null) {
+    if (_rect == null && widget.controller.coverPosition == 0.0) {
       _rect = Rect.fromLTWH(
         0.0,
         0.0,
@@ -114,8 +113,12 @@ class _CoverSliderState extends State<CoverSlider> {
   //MISC//
   //----//
   void _controllerSeekTo(double position) async {
+    final Duration duration = widget.controller.isTrimmmed
+        ? widget.controller.endTrim - widget.controller.startTrim
+        : widget.controller.videoDuration;
+
     await _controller.seekTo(
-      _controller.value.duration * (position / _layout.width),
+      duration * (position / _layout.width),
     );
     /* TODO : update smoothly frame selected in the video_viewer
     await _controller.play();
@@ -137,7 +140,8 @@ class _CoverSliderState extends State<CoverSlider> {
 
   void _updateControllerIsCovering(bool value) {
     widget.controller.isCovering = value;
-    //_controllerRunning(value); // does not work propertly cause while _onHorizontalDragUpdate the video will still be playing
+    _controllerRunning(
+        value); // does not work propertly cause while _onHorizontalDragUpdate the video will still be playing
   }
 
   double _getCoverPosition() {

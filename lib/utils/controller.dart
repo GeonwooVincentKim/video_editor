@@ -171,6 +171,8 @@ class VideoEditorController extends ChangeNotifier with WidgetsBindingObserver {
     _trimEnd = videoDuration * _maxTrim;
     _trimStart = videoDuration * _minTrim;
 
+    _coverPos = 0.0;
+
     if (_trimStart != Duration.zero || _trimEnd != videoDuration)
       _isTrimmed = true;
     else
@@ -197,15 +199,12 @@ class VideoEditorController extends ChangeNotifier with WidgetsBindingObserver {
   //VIDEO COVER//
   //----------//
 
-  ///Update coverPos. Argument range are `0.0` to `1.0`.
   void updateCover(double coverPos) {
     _coverPos = coverPos;
     notifyListeners();
   }
 
-  ///Get the **VideoPosition** (Range is `0.0` to `1.0`).
-  double get coverPosition =>
-      videoPosition.inMilliseconds / videoDuration.inMilliseconds;
+  double get coverPosition => _coverPos;
 
   ///Don't touch this >:)
 
