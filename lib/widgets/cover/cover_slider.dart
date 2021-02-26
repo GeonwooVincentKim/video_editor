@@ -1,8 +1,10 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:helpers/helpers.dart';
 import 'package:video_editor/utils/controller.dart';
 import 'package:video_editor/widgets/cover/cover_slider_painter.dart';
-import 'package:video_editor/widgets/trim/thumbnail_slider.dart';
+import 'package:video_editor/widgets/cover/cover_thumbnail_slider.dart';
 import 'package:video_player/video_player.dart';
 
 class CoverSlider extends StatefulWidget {
@@ -36,6 +38,12 @@ class _CoverSliderState extends State<CoverSlider> {
   @override
   void initState() {
     _controller = widget.controller.video;
+
+    /*
+    // Init to cover position, the video shouldn't be playing on this widget
+    _controllerSeekTo(widget.controller.coverPosition);
+    _controller.pause();
+    */
     super.initState();
   }
 
@@ -109,10 +117,14 @@ class _CoverSliderState extends State<CoverSlider> {
     await _controller.seekTo(
       _controller.value.duration * (position / _layout.width),
     );
+    /* TODO : update smoothly frame selected in the video_viewer
+    await _controller.play();
+    await _controller.pause();
+    */
   }
 
   void _controllerRunning(bool play) async {
-    if (play)
+    if (play && !widget.controller.isPlaying)
       await _controller.play();
     else
       await _controller.pause();
@@ -125,7 +137,7 @@ class _CoverSliderState extends State<CoverSlider> {
 
   void _updateControllerIsCovering(bool value) {
     widget.controller.isCovering = value;
-    _controllerRunning(value);
+    //_controllerRunning(value); // does not work propertly cause while _onHorizontalDragUpdate the video will still be playing
   }
 
   double _getCoverPosition() {
@@ -147,7 +159,7 @@ class _CoverSliderState extends State<CoverSlider> {
         onHorizontalDragEnd: _onHorizontalDragEnd,
         behavior: HitTestBehavior.opaque,
         child: Stack(children: [
-          ThumbnailSlider(
+          CoverThumbnailSlider(
             controller: widget.controller,
             height: widget.height,
             quality: widget.quality,

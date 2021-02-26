@@ -56,6 +56,7 @@ class VideoEditorController extends ChangeNotifier with WidgetsBindingObserver {
 
   int _rotation = 0;
   bool isTrimming = false;
+  bool _isTrimmed = false;
   bool isCropping = false;
   bool isCovering = false;
   double _minTrim = 0.0;
@@ -169,10 +170,21 @@ class VideoEditorController extends ChangeNotifier with WidgetsBindingObserver {
   void _updateTrimRange() {
     _trimEnd = videoDuration * _maxTrim;
     _trimStart = videoDuration * _minTrim;
+
+    if (_trimStart != Duration.zero || _trimEnd != videoDuration)
+      _isTrimmed = true;
+    else
+      _isTrimmed = false;
   }
+
+  bool get isTrimmmed => _isTrimmed;
+
+  Duration get startTrim => _trimStart;
 
   ///Get the **MinTrim** (Range is `0.0` to `1.0`).
   double get minTrim => _minTrim;
+
+  Duration get endTrim => _trimEnd;
 
   ///Get the **MaxTrim** (Range is `0.0` to `1.0`).
   double get maxTrim => _maxTrim;
