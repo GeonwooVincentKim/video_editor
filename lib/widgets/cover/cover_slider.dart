@@ -1,5 +1,3 @@
-import 'dart:async';
-
 import 'package:flutter/material.dart';
 import 'package:helpers/helpers.dart';
 import 'package:video_editor/utils/controller.dart';
@@ -39,9 +37,6 @@ class _CoverSliderState extends State<CoverSlider> {
   void initState() {
     _controller = widget.controller.video;
 
-    // TODO the video shouldn't be playing on this widget
-    // if (widget.controller.isPlaying) _controller.pause();
-
     super.initState();
   }
 
@@ -66,13 +61,9 @@ class _CoverSliderState extends State<CoverSlider> {
     final Offset delta = details.delta;
     final pos = _rect.topLeft + delta;
     _changeCoverRect(left: pos.dx);
-    _controllerSeekTo(pos.dx);
   }
 
   void _onHorizontalDragEnd(_) {
-    final double _progressCover = _getCoverPosition();
-    if (_progressCover >= _rect.right || _progressCover < _rect.left)
-      _controllerSeekTo(_progressCover);
     _updateControllerIsCovering(false);
     _updateControllerCover();
   }
@@ -112,27 +103,6 @@ class _CoverSliderState extends State<CoverSlider> {
   //----//
   //MISC//
   //----//
-  void _controllerSeekTo(double position) async {
-    final Duration duration = widget.controller.isTrimmmed
-        ? widget.controller.endTrim - widget.controller.startTrim
-        : widget.controller.videoDuration;
-
-    await _controller.seekTo(
-      duration * (position / _layout.width),
-    );
-    /* TODO : update smoothly frame selected in the video_viewer
-    await _controller.play();
-    await _controller.pause();
-    */
-  }
-
-  void _controllerRunning(bool play) async {
-    if (play && !widget.controller.isPlaying)
-      await _controller.play();
-    else
-      await _controller.pause();
-  }
-
   void _updateControllerCover() {
     final double width = _layout.width;
     widget.controller.updateCover(_rect.left / width);
@@ -140,8 +110,6 @@ class _CoverSliderState extends State<CoverSlider> {
 
   void _updateControllerIsCovering(bool value) {
     widget.controller.isCovering = value;
-    _controllerRunning(
-        value); // does not work propertly cause while _onHorizontalDragUpdate the video will still be playing
   }
 
   double _getCoverPosition() {

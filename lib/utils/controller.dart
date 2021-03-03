@@ -68,6 +68,14 @@ class VideoEditorController extends ChangeNotifier with WidgetsBindingObserver {
   Duration _trimStart = Duration.zero;
 
   double _coverPos = 0.0;
+  List _frames;
+  int _coverIndex;
+  File _cover;
+  final double fps = 5.0;
+
+  String _editionName;
+  Directory _editionTempDir;
+
   VideoPlayerController _video;
 
   //----------------//
@@ -79,6 +87,12 @@ class VideoEditorController extends ChangeNotifier with WidgetsBindingObserver {
     await _video.initialize();
     _video.addListener(_videoListener);
     _video.setLooping(true);
+
+    _editionName = path.basename(file.path).split('.')[0];
+    final String tempPath =
+        (await getTemporaryDirectory()).path + "/$_editionName/";
+    _editionTempDir = new Directory(tempPath);
+
     _updateTrimRange();
     notifyListeners();
   }
@@ -94,6 +108,9 @@ class VideoEditorController extends ChangeNotifier with WidgetsBindingObserver {
     if (executions.length > 0) await _ffmpeg.cancel();
     _ffprobe = null;
     _ffmpeg = null;
+    if (_editionTempDir.existsSync()) {
+      await _editionTempDir.delete(recursive: true);
+    }
     super.dispose();
   }
 
@@ -129,8 +146,21 @@ class VideoEditorController extends ChangeNotifier with WidgetsBindingObserver {
 
     if (streams != null && streams.length > 0) {
       for (var stream in streams) {
-        final width = stream.getAllProperties()['width'];
-        final height = stream.getAllProperties()['height'];
+        // Check side data for rotation (width and height are reverse opposite when the file come from camera)
+        bool sideDataRotation = false;
+        final sideDataList = stream.getAllProperties()['side_data_list'];
+        if (sideDataList != null) {
+          if (sideDataList[0]['rotation'] == 90 ||
+              sideDataList[0]['rotation'] == -90) sideDataRotation = true;
+        }
+
+        int width = stream.getAllProperties()['width'];
+        int height = stream.getAllProperties()['height'];
+        // If video as been rotated : switch height and width
+        if (sideDataRotation) {
+          width = stream.getAllProperties()['height'];
+          height = stream.getAllProperties()['width'];
+        }
         if (width != null && width > _videoWidth) _videoWidth = width;
         if (height != null && height > _videoHeight) _videoHeight = height;
       }
@@ -167,16 +197,18 @@ class VideoEditorController extends ChangeNotifier with WidgetsBindingObserver {
     notifyListeners();
   }
 
-  void _updateTrimRange() {
+  void _updateTrimRange() async {
     _trimEnd = videoDuration * _maxTrim;
     _trimStart = videoDuration * _minTrim;
 
-    _coverPos = 0.0;
+    if (!isTrimming) _initCover();
 
     if (_trimStart != Duration.zero || _trimEnd != videoDuration)
       _isTrimmed = true;
     else
       _isTrimmed = false;
+
+    notifyListeners();
   }
 
   bool get isTrimmmed => _isTrimmed;
@@ -199,12 +231,39 @@ class VideoEditorController extends ChangeNotifier with WidgetsBindingObserver {
   //VIDEO COVER//
   //----------//
 
-  void updateCover(double coverPos) {
-    _coverPos = coverPos;
+  void _initCover() async {
+    _coverPos = 0.0;
+    _coverIndex = 0;
+    _frames = await extractFrames(fps: fps);
+    // Sort files to be sure to store them in alphabetical order
+    _frames.sort((a, b) {
+      return a.path.compareTo(b.path);
+    });
+    _cover = new File(_frames.first.path);
     notifyListeners();
   }
 
+  void updateCover(double coverPos) async {
+    _coverPos = coverPos;
+    _coverIndex = (_frames.length * coverPos).toInt();
+    _cover = new File(_frames[_coverIndex].path);
+    notifyListeners();
+  }
+
+  /// Return the position of the cover in Duration format on all the video (no trim)
+  Duration _coverTime() {
+    return new Duration(
+        milliseconds: (_isTrimmed
+                ? ((_trimEnd - _trimStart).inMilliseconds * _coverPos) +
+                    _trimStart.inMilliseconds
+                : videoDuration.inMilliseconds * _coverPos)
+            .toInt());
+  }
+
   double get coverPosition => _coverPos;
+  File get cover => _cover;
+  int get coverIndex => _coverIndex;
+  List<dynamic> get frames => _frames;
 
   ///Don't touch this >:)
 
@@ -344,5 +403,129 @@ class VideoEditorController extends ChangeNotifier with WidgetsBindingObserver {
     }
 
     return preset == VideoExportPreset.none ? "" : "-preset $newPreset";
+  }
+
+  String _printDuration(Duration duration) {
+    String twoDigits(int n) => n.toString().padLeft(2, "0");
+    String twoDigitMinutes = twoDigits(duration.inMinutes.remainder(60));
+    String twoDigitSeconds = twoDigits(duration.inSeconds.remainder(60));
+    String stringMillis = duration.inMilliseconds.remainder(1000).toString();
+    return "${twoDigits(duration.inHours)}:$twoDigitMinutes:$twoDigitSeconds.$stringMillis";
+  }
+
+  /// Extract the current cover selected by the user, or by default the first one
+  Future<File> extractCover({
+    double scale = 1.0,
+    void Function(Statistics) progressCallback,
+  }) async {
+    final FlutterFFmpegConfig _config = FlutterFFmpegConfig();
+    String timeFormat = _printDuration(_coverTime());
+    final String outputPath =
+        _editionTempDir.path + _editionName + timeFormat + ".jpg";
+
+    //-----------------//
+    //CALCULATE FILTERS//
+    //-----------------//
+    final String crop = _minCrop == Offset.zero && _maxCrop == Offset(1.0, 1.0)
+        ? ""
+        : await _getCrop(file.path);
+    final String rotation =
+        _rotation >= 360 || _rotation <= 0 ? "" : _getRotation();
+    final String scaleInstruction =
+        scale == 1.0 ? "" : "scale=iw*$scale:ih*$scale";
+
+    //----------------//
+    //VALIDATE FILTERS//
+    //----------------//
+    final List<String> filters = [scaleInstruction, crop, rotation];
+    filters.removeWhere((item) => item.isEmpty);
+    final String filter = filters.isNotEmpty ? "" + filters.join(",") : "";
+    final String execute =
+        " -ss $timeFormat -i ${_editionTempDir.path} -vf \"$filter\" -frames:v 1 $outputPath";
+
+    if (progressCallback != null)
+      _config.enableStatisticsCallback(progressCallback);
+    final int code = await _ffmpeg.execute(execute);
+    _config.enableStatisticsCallback(null);
+
+    //------//
+    //RESULT//s
+    //------//
+    if (code == 0) {
+      print("SUCCESS FRAME EXTRACTION AT $outputPath");
+      return File(outputPath);
+    } else if (code == 255) {
+      print("USER CANCEL FRAME EXTRACTION");
+      return null;
+    } else {
+      print("ERROR ON FRAME EXTRACTION (CODE $code)");
+      return null;
+    }
+  }
+
+  /// Extract all the frames (5 fps) of the trimmed video
+  Future<List<dynamic>> extractFrames({
+    String format = "mp4",
+    double scale = 1.0,
+    double fps = 5.0,
+    void Function(Statistics) progressCallback,
+    VideoExportPreset preset = VideoExportPreset.none,
+  }) async {
+    final FlutterFFmpegConfig _config = FlutterFFmpegConfig();
+    final String videoPath = file.path;
+    // Create directory if does not exists and delete content if not empty
+    if (_editionTempDir.existsSync()) {
+      await _editionTempDir.delete(recursive: true);
+    }
+    await _editionTempDir.create(recursive: true);
+
+    //-----------------//
+    //CALCULATE FILTERS//
+    //-----------------//
+    final String gif = format != "gif" ? "" : "fps=10 -loop 0";
+    final String trim = _minTrim == 0.0 && _maxTrim == 1.0
+        ? ""
+        : "-ss $_trimStart -to $_trimEnd";
+    final String crop = _minCrop == Offset.zero && _maxCrop == Offset(1.0, 1.0)
+        ? ""
+        : await _getCrop(videoPath);
+    final String rotation =
+        _rotation >= 360 || _rotation <= 0 ? "" : _getRotation();
+    final String scaleInstruction =
+        scale == 1.0 ? "" : "scale=iw*$scale:ih*$scale";
+
+    //----------------//
+    //VALIDATE FILTERS//
+    //----------------//
+    final List<String> filters = [crop, scaleInstruction, rotation, gif];
+    filters.removeWhere((item) => item.isEmpty);
+    final String filter = filters.isNotEmpty ? "" + filters.join(",") : "";
+
+    final String outputPath = _editionTempDir.path +
+        _editionName +
+        _minTrim.toString() +
+        _maxTrim.toString() +
+        "%03d.jpg";
+    final String execute =
+        " -i $videoPath $trim -vf \"fps=$fps,$filter\" $outputPath";
+
+    if (progressCallback != null)
+      _config.enableStatisticsCallback(progressCallback);
+    final int code = await _ffmpeg.execute(execute);
+    _config.enableStatisticsCallback(null);
+
+    //------//
+    //RESULT//
+    //------//
+    if (code == 0) {
+      print("SUCCESS FRAMES EXTRACTION AT $outputPath");
+      return _editionTempDir.list(followLinks: false).toList();
+    } else if (code == 255) {
+      print("USER CANCEL FRAMES EXTRACTION");
+      return null;
+    } else {
+      print("ERROR ON FRAMES EXTRACTION (CODE $code)");
+      return null;
+    }
   }
 }
