@@ -144,7 +144,7 @@ class _CoverSliderState extends State<CoverSlider> {
                 painter: CoverSliderPainter(
                   _rect,
                   _getCoverPosition(),
-                  style: widget.controller.trimStyle,
+                  style: widget.controller.coverStyle,
                 ),
               );
             },

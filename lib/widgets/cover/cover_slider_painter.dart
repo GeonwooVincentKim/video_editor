@@ -6,15 +6,17 @@ class CoverSliderPainter extends CustomPainter {
 
   final Rect rect;
   final double position;
-  final TrimSliderStyle style;
+  final CoverSliderStyle style;
 
   @override
   void paint(Canvas canvas, Size size) {
-    final double width = style.lineWidth;
-    final Paint linePaint = Paint()..color = Colors.white;
-    final Paint background = Paint()..color = Colors.white.withOpacity(0.6);
+    final Paint background = Paint()..color = style.background;
+    final position = Paint()
+      ..color = style.lineColor
+      ..strokeWidth = style.lineWidth
+      ..style = PaintingStyle.stroke;
 
-    //BACKGROUND LEFT
+    // BACKGROUND LEFT
     canvas.drawRect(
       Rect.fromPoints(
         Offset.zero,
@@ -23,7 +25,7 @@ class CoverSliderPainter extends CustomPainter {
       background,
     );
 
-    //BACKGROUND RIGHT
+    // BACKGROUND RIGHT
     canvas.drawRect(
       Rect.fromPoints(
         rect.topRight,
@@ -32,40 +34,15 @@ class CoverSliderPainter extends CustomPainter {
       background,
     );
 
-    //TOP RECT
+    // RECT
     canvas.drawRect(
       Rect.fromPoints(
-        rect.topLeft,
-        rect.topRight + Offset(0.0, width),
+        Offset(rect.left + position.strokeWidth / 2,
+            rect.bottom - position.strokeWidth / 2),
+        Offset(rect.right - position.strokeWidth / 2,
+            rect.top + position.strokeWidth / 2),
       ),
-      linePaint,
-    );
-
-    //RIGHT RECT
-    canvas.drawRect(
-      Rect.fromPoints(
-        rect.topRight - Offset(width, -width),
-        rect.bottomRight,
-      ),
-      linePaint,
-    );
-
-    //BOTTOM RECT
-    canvas.drawRect(
-      Rect.fromPoints(
-        rect.bottomRight - Offset(width, width),
-        rect.bottomLeft,
-      ),
-      linePaint,
-    );
-
-    //LEFT RECT
-    canvas.drawRect(
-      Rect.fromPoints(
-        rect.bottomLeft - Offset(-width, width),
-        rect.topLeft,
-      ),
-      linePaint,
+      position,
     );
   }
 

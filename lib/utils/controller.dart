@@ -38,6 +38,9 @@ class VideoEditorController extends ChangeNotifier with WidgetsBindingObserver {
   ///Style for [CropGridViewer]
   final CropGridStyle cropStyle;
 
+  ///Style for [CoverSlider]
+  final CoverSliderStyle coverStyle;
+
   ///Video from [File].
   final File file;
 
@@ -46,10 +49,12 @@ class VideoEditorController extends ChangeNotifier with WidgetsBindingObserver {
     this.file, {
     TrimSliderStyle trimStyle,
     CropGridStyle cropStyle,
+    CoverSliderStyle coverStyle,
   })  : assert(file != null),
         _video = VideoPlayerController.file(file),
         this.cropStyle = cropStyle ?? CropGridStyle(),
-        this.trimStyle = trimStyle ?? TrimSliderStyle();
+        this.trimStyle = trimStyle ?? TrimSliderStyle(),
+        this.coverStyle = coverStyle ?? CoverSliderStyle();
 
   FlutterFFmpeg _ffmpeg = FlutterFFmpeg();
   FlutterFFprobe _ffprobe = FlutterFFprobe();
@@ -441,7 +446,7 @@ class VideoEditorController extends ChangeNotifier with WidgetsBindingObserver {
     filters.removeWhere((item) => item.isEmpty);
     final String filter = filters.isNotEmpty ? "" + filters.join(",") : "";
     final String execute =
-        " -ss $timeFormat -i ${_editionTempDir.path} -vf \"$filter\" -frames:v 1 $outputPath";
+        " -ss $timeFormat -i ${_editionTempDir.path} -vf \"$filter\" -frames:v 1 $outputPath -hide_banner -loglevel error";
 
     if (progressCallback != null)
       _config.enableStatisticsCallback(progressCallback);
@@ -507,7 +512,7 @@ class VideoEditorController extends ChangeNotifier with WidgetsBindingObserver {
         _maxTrim.toString() +
         "%03d.jpg";
     final String execute =
-        " -i $videoPath $trim -vf \"fps=$fps,$filter\" $outputPath";
+        " -i $videoPath $trim -vf \"fps=$fps,$filter\" $outputPath -hide_banner -loglevel error";
 
     if (progressCallback != null)
       _config.enableStatisticsCallback(progressCallback);
