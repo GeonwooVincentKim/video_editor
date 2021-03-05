@@ -213,6 +213,12 @@ class _TrimSliderState extends State<TrimSlider> {
                 painter: TrimSliderPainter(
                   _rect,
                   _getTrimPosition(),
+                  // Compute cropped height to not display cropped painted area in thunbnails slider
+                  cropHeight: widget.controller.video.value.aspectRatio <= 1.0
+                      ? widget.height *
+                          widget.controller.video.value.aspectRatio
+                      : widget.height /
+                          widget.controller.video.value.aspectRatio,
                   style: widget.controller.trimStyle,
                 ),
               );
