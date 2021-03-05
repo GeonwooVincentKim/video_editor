@@ -239,12 +239,15 @@ class VideoEditorController extends ChangeNotifier with WidgetsBindingObserver {
   void _initCover() async {
     _coverPos = 0.0;
     _coverIndex = 0;
+    _cover = null;
     _frames = await extractFrames(fps: fps);
     // Sort files to be sure to store them in alphabetical order
-    _frames.sort((a, b) {
-      return a.path.compareTo(b.path);
-    });
-    _cover = new File(_frames.first.path);
+    if (_frames != null) {
+      _frames.sort((a, b) {
+        return a.path.compareTo(b.path);
+      });
+      _cover = new File(_frames.first.path);
+    }
     notifyListeners();
   }
 
