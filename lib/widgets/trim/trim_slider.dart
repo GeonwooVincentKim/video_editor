@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:helpers/helpers.dart';
 import 'package:video_editor/utils/controller.dart';
 import 'package:video_editor/widgets/trim/trim_slider_painter.dart';
-import 'package:video_editor/widgets/trim/thumbnail_slider.dart';
+import 'package:video_editor/widgets/thumbnail/thumbnail_slider.dart';
 import 'package:video_player/video_player.dart';
 
 enum _TrimBoundaries { left, right, inside, progress }
@@ -200,11 +200,11 @@ class _TrimSliderState extends State<TrimSlider> {
         onHorizontalDragEnd: _onHorizontalDragEnd,
         behavior: HitTestBehavior.opaque,
         child: Stack(children: [
-          ThumbnailSlider(
-            controller: widget.controller,
-            height: widget.height,
-            quality: widget.quality,
-          ),
+          new ThumbnailSlider(
+              controller: widget.controller,
+              height: widget.height,
+              quality: widget.quality,
+              type: ThumbnailType.trim),
           AnimatedBuilder(
             animation: _controller,
             builder: (_, __) {

@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:helpers/helpers.dart';
 import 'package:video_editor/utils/controller.dart';
 import 'package:video_editor/widgets/cover/cover_slider_painter.dart';
-import 'package:video_editor/widgets/cover/cover_thumbnail_slider.dart';
+import 'package:video_editor/widgets/thumbnail/thumbnail_slider.dart';
 import 'package:video_player/video_player.dart';
 
 class CoverSlider extends StatefulWidget {
@@ -131,11 +131,11 @@ class _CoverSliderState extends State<CoverSlider> {
         onHorizontalDragEnd: _onHorizontalDragEnd,
         behavior: HitTestBehavior.opaque,
         child: Stack(children: [
-          CoverThumbnailSlider(
-            controller: widget.controller,
-            height: widget.height,
-            quality: widget.quality,
-          ),
+          new ThumbnailSlider(
+              controller: widget.controller,
+              height: widget.height,
+              quality: widget.quality,
+              type: ThumbnailType.cover),
           AnimatedBuilder(
             animation: _controller,
             builder: (_, __) {

@@ -5,11 +5,14 @@ import 'package:video_thumbnail/video_thumbnail.dart';
 import 'package:video_editor/widgets/crop/crop_grid_painter.dart';
 import 'package:video_editor/utils/controller.dart';
 
-class CoverThumbnailSlider extends StatefulWidget {
-  CoverThumbnailSlider({
+enum ThumbnailType { trim, cover }
+
+class ThumbnailSlider extends StatefulWidget {
+  ThumbnailSlider({
     @required this.controller,
     this.height = 60,
     this.quality = 25,
+    @required this.type,
   }) : assert(controller != null);
 
   ///MAX QUALITY IS 100 - MIN QUALITY IS 0
@@ -20,11 +23,13 @@ class CoverThumbnailSlider extends StatefulWidget {
 
   final VideoEditorController controller;
 
+  final ThumbnailType type;
+
   @override
-  _CoverThumbnailSliderState createState() => _CoverThumbnailSliderState();
+  _ThumbnailSliderState createState() => _ThumbnailSliderState();
 }
 
-class _CoverThumbnailSliderState extends State<CoverThumbnailSlider> {
+class _ThumbnailSliderState extends State<ThumbnailSlider> {
   double _aspect = 1.0, _scale = 1.0, _width = 1.0;
   int _thumbnails = 8;
 
@@ -43,11 +48,11 @@ class _CoverThumbnailSliderState extends State<CoverThumbnailSlider> {
   }
 
   @override
-  void didUpdateWidget(CoverThumbnailSlider oldWidget) {
+  void didUpdateWidget(ThumbnailSlider oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (!widget.controller.isPlaying)
       setState(() {
-        _rect = _calculateCoverRect();
+        _rect = _calculateTrimRect();
         final double _scaleX = _size.width / _rect.width;
         final double _scaleY = _size.height / _rect.height;
 
@@ -66,7 +71,27 @@ class _CoverThumbnailSliderState extends State<CoverThumbnailSlider> {
       });
   }
 
-  Stream<List<Uint8List>> _generateThumbnails() async* {
+  Stream<List<Uint8List>> _generateTrimThumbnails() async* {
+    final String path = widget.controller.file.path;
+    final int duration = widget.controller.videoDuration.inMilliseconds;
+    final double eachPart = duration / _thumbnails;
+
+    List<Uint8List> _byteList = [];
+
+    for (int i = 1; i <= _thumbnails; i++) {
+      Uint8List _bytes = await VideoThumbnail.thumbnailData(
+        imageFormat: ImageFormat.JPEG,
+        video: path,
+        timeMs: (eachPart * i).toInt(),
+        quality: widget.quality,
+      );
+      _byteList.add(_bytes);
+
+      yield _byteList;
+    }
+  }
+
+  Stream<List<Uint8List>> _generateCoverThumbnails() async* {
     final String path = widget.controller.file.path;
 
     final int duration = _isTrimmed
@@ -94,7 +119,7 @@ class _CoverThumbnailSliderState extends State<CoverThumbnailSlider> {
     }
   }
 
-  Rect _calculateCoverRect() {
+  Rect _calculateTrimRect() {
     final Offset min = widget.controller.minCrop;
     final Offset max = widget.controller.maxCrop;
     return Rect.fromPoints(
@@ -120,8 +145,10 @@ class _CoverThumbnailSliderState extends State<CoverThumbnailSlider> {
             ? Size(widget.height * _aspect, widget.height)
             : Size(widget.height, widget.height / _aspect);
         _thumbnails = (_width ~/ _size.width) + 1;
-        _stream = _generateThumbnails();
-        _rect = _calculateCoverRect();
+        _stream = widget.type == ThumbnailType.trim
+            ? _generateTrimThumbnails()
+            : _generateCoverThumbnails();
+        _rect = _calculateTrimRect();
       }
 
       return StreamBuilder(
@@ -139,15 +166,15 @@ class _CoverThumbnailSliderState extends State<CoverThumbnailSlider> {
                       child: Transform.scale(
                         scale: _scale,
                         child: Transform.translate(
-                            offset: _translate,
-                            child: Container(
-                              alignment: Alignment.center,
-                              height: _size.height,
-                              width: _size.width,
-                              child:
-                                  _croppedThumbnail(_size.width, data[index]),
-                              //_notCroppedThumbnail(data[index]),
-                            )),
+                          offset: _translate,
+                          child: Container(
+                            alignment: Alignment.center,
+                            height: _size.height,
+                            width: _size.width,
+                            child: _croppedThumbnail(_size.width, data[index]),
+                            //_notCroppedThumbnail(data[index]),
+                          ),
+                        ),
                       ),
                     );
                   },
