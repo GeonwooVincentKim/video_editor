@@ -139,29 +139,15 @@ class _CoverThumbnailSliderState extends State<CoverThumbnailSlider> {
                       child: Transform.scale(
                         scale: _scale,
                         child: Transform.translate(
-                          offset: _translate,
-                          child: Container(
-                            alignment: Alignment.center,
-                            height: _size.height,
-                            width: _size.width,
-                            child: Stack(children: [
-                              Image(
-                                image: MemoryImage(data[index]),
-                                width: _size.width,
-                                height: _size.height,
-                                alignment: Alignment.topLeft,
-                              ),
-                              CustomPaint(
-                                size: _size,
-                                painter: CropGridPainter(
-                                  _rect,
-                                  showGrid: false,
-                                  style: widget.controller.cropStyle,
-                                ),
-                              )
-                            ]),
-                          ),
-                        ),
+                            offset: _translate,
+                            child: Container(
+                              alignment: Alignment.center,
+                              height: _size.height,
+                              width: _size.width,
+                              child:
+                                  _croppedThumbnail(_size.width, data[index]),
+                              //_notCroppedThumbnail(data[index]),
+                            )),
                       ),
                     );
                   },
@@ -170,5 +156,62 @@ class _CoverThumbnailSliderState extends State<CoverThumbnailSlider> {
         },
       );
     });
+  }
+
+  Widget _notCroppedThumbnail(Uint8List data) {
+    return new Stack(children: [
+      Image(
+        image: MemoryImage(data),
+        width: _size.width,
+        height: _size.height,
+        alignment: Alignment.topLeft,
+      ),
+      CustomPaint(
+        size: _size,
+        painter: CropGridPainter(
+          _rect,
+          showGrid: false,
+          style: widget.controller.cropStyle,
+        ),
+      )
+    ]);
+  }
+
+  /// Use overflow widget to hide cropped crop painted area in thumbnails
+  Widget _croppedThumbnail(double size, Uint8List data) {
+    return new Container(
+      width: size,
+      height: size,
+      child: ClipRect(
+        child: OverflowBox(
+          alignment: Alignment.center,
+          child: FittedBox(
+            fit: BoxFit.fitWidth,
+            child: Container(
+              width: size,
+              height: size / widget.controller.video.value.aspectRatio,
+              child: ClipRRect(
+                child: Stack(children: [
+                  Image(
+                    image: MemoryImage(data),
+                    width: _size.width,
+                    height: _size.height,
+                    alignment: Alignment.topLeft,
+                  ),
+                  CustomPaint(
+                    size: _size,
+                    painter: CropGridPainter(
+                      _rect,
+                      showGrid: false,
+                      style: widget.controller.cropStyle,
+                    ),
+                  )
+                ]),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
   }
 }

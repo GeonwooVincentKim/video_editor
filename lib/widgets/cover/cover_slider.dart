@@ -144,6 +144,12 @@ class _CoverSliderState extends State<CoverSlider> {
                 painter: CoverSliderPainter(
                   _rect,
                   _getCoverPosition(),
+                  // Compute cropped height to not display cropped painted area in thunbnails slider
+                  cropHeight: widget.controller.video.value.aspectRatio <= 1.0
+                      ? widget.height *
+                          widget.controller.video.value.aspectRatio
+                      : widget.height /
+                          widget.controller.video.value.aspectRatio,
                   style: widget.controller.coverStyle,
                 ),
               );
