@@ -171,7 +171,8 @@ class _ThumbnailSliderState extends State<ThumbnailSlider> {
                             alignment: Alignment.center,
                             height: _size.height,
                             width: _size.width,
-                            child: _croppedThumbnail(_size.width, data[index]),
+                            child: _croppedThumbnail(_size.width, data[index],
+                                data[index > 0 ? index - 1 : 0]),
                             //_notCroppedThumbnail(data[index]),
                           ),
                         ),
@@ -205,7 +206,7 @@ class _ThumbnailSliderState extends State<ThumbnailSlider> {
   }
 
   /// Use overflow widget to hide cropped crop painted area in thumbnails
-  Widget _croppedThumbnail(double size, Uint8List data) {
+  Widget _croppedThumbnail(double size, Uint8List data, Uint8List prevData) {
     return new Container(
       width: size,
       height: size,
@@ -220,7 +221,9 @@ class _ThumbnailSliderState extends State<ThumbnailSlider> {
               child: ClipRRect(
                 child: Stack(children: [
                   Image(
-                    image: MemoryImage(data),
+                    image: MemoryImage(data != null
+                        ? data
+                        : prevData), // If last thumbmnail is null display the previous one (avoid bytes != null error)
                     width: _size.width,
                     height: _size.height,
                     alignment: Alignment.topLeft,

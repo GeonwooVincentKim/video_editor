@@ -241,7 +241,7 @@ class VideoEditorController extends ChangeNotifier with WidgetsBindingObserver {
     _coverPos = 0.0;
     _coverIndex = 0;
     //_cover = null;
-    _frames = await extractFrames(fps: 3);
+    _frames = await extractFrames();
     // Sort files to be sure to store them in alphabetical order
     if (_frames != null) {
       _frames.sort((a, b) {
