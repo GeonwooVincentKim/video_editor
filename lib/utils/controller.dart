@@ -64,6 +64,7 @@ class VideoEditorController extends ChangeNotifier with WidgetsBindingObserver {
   bool _isTrimmed = false;
   bool isCropping = false;
   bool isCovering = false;
+  bool _isExtractingFrames = false;
   double _minTrim = 0.0;
   double _maxTrim = 1.0;
   Offset _minCrop = Offset.zero;
@@ -76,7 +77,6 @@ class VideoEditorController extends ChangeNotifier with WidgetsBindingObserver {
   List _frames;
   int _coverIndex;
   File _cover;
-  final double fps = 5.0;
 
   String _editionName;
   Directory _editionTempDir;
@@ -237,16 +237,18 @@ class VideoEditorController extends ChangeNotifier with WidgetsBindingObserver {
   //----------//
 
   void _initCover() async {
+    _isExtractingFrames = true;
     _coverPos = 0.0;
     _coverIndex = 0;
-    _cover = null;
-    _frames = await extractFrames(fps: fps);
+    //_cover = null;
+    _frames = await extractFrames(fps: 3);
     // Sort files to be sure to store them in alphabetical order
     if (_frames != null) {
       _frames.sort((a, b) {
         return a.path.compareTo(b.path);
       });
       _cover = new File(_frames.first.path);
+      _isExtractingFrames = false;
     }
     notifyListeners();
   }
@@ -268,6 +270,7 @@ class VideoEditorController extends ChangeNotifier with WidgetsBindingObserver {
             .toInt());
   }
 
+  bool get isExtractingFrames => _isExtractingFrames;
   double get coverPosition => _coverPos;
   File get cover => _cover;
   int get coverIndex => _coverIndex;
@@ -481,11 +484,14 @@ class VideoEditorController extends ChangeNotifier with WidgetsBindingObserver {
   }) async {
     final FlutterFFmpegConfig _config = FlutterFFmpegConfig();
     final String videoPath = file.path;
+    final Directory localProcessDir = new Directory(_editionTempDir.path +
+        DateTime.now().millisecondsSinceEpoch.toString() +
+        "/");
     // Create directory if does not exists and delete content if not empty
-    if (_editionTempDir.existsSync()) {
-      await _editionTempDir.delete(recursive: true);
+    if (localProcessDir.existsSync()) {
+      await localProcessDir.delete(recursive: true);
     }
-    await _editionTempDir.create(recursive: true);
+    await localProcessDir.create(recursive: true);
 
     //-----------------//
     //CALCULATE FILTERS//
@@ -494,6 +500,8 @@ class VideoEditorController extends ChangeNotifier with WidgetsBindingObserver {
     final String trim = _minTrim == 0.0 && _maxTrim == 1.0
         ? ""
         : "-ss $_trimStart -to $_trimEnd";
+    final String ssTrim = _minTrim == 0.0 ? "" : "-ss $_trimStart";
+    final String toTrim = _maxTrim == 1.0 ? "" : "-to $_trimEnd";
     final String crop = _minCrop == Offset.zero && _maxCrop == Offset(1.0, 1.0)
         ? ""
         : await _getCrop(videoPath);
@@ -509,13 +517,14 @@ class VideoEditorController extends ChangeNotifier with WidgetsBindingObserver {
     filters.removeWhere((item) => item.isEmpty);
     final String filter = filters.isNotEmpty ? "" + filters.join(",") : "";
 
-    final String outputPath = _editionTempDir.path +
+    final String outputPath = localProcessDir.path +
         _editionName +
         _minTrim.toString() +
         _maxTrim.toString() +
         "%03d.jpg";
+    // Create a thumbnail image every X seconds of the video: https://trac.ffmpeg.org/wiki/Create%20a%20thumbnail%20image%20every%20X%20seconds%20of%20the%20video
     final String execute =
-        " -i $videoPath $trim -vf \"fps=$fps,$filter\" $outputPath -hide_banner -loglevel error";
+        " $ssTrim -i $videoPath $toTrim -vf \"fps=$fps,$filter\" $outputPath -hide_banner -loglevel error";
 
     if (progressCallback != null)
       _config.enableStatisticsCallback(progressCallback);
@@ -527,7 +536,7 @@ class VideoEditorController extends ChangeNotifier with WidgetsBindingObserver {
     //------//
     if (code == 0) {
       print("SUCCESS FRAMES EXTRACTION AT $outputPath");
-      return _editionTempDir.list(followLinks: false).toList();
+      return localProcessDir.list(followLinks: false).toList();
     } else if (code == 255) {
       print("USER CANCEL FRAMES EXTRACTION");
       return null;
