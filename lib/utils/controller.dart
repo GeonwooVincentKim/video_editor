@@ -450,7 +450,7 @@ class VideoEditorController extends ChangeNotifier with WidgetsBindingObserver {
     filters.removeWhere((item) => item.isEmpty);
     final String filter = filters.isNotEmpty ? "" + filters.join(",") : "";
     final String execute =
-        " -ss $timeFormat -i ${_editionTempDir.path} -vf \"$filter\" -frames:v 1 $outputPath -hide_banner -loglevel error";
+        " -ss $timeFormat -i ${file.path} -vf \"$filter\" -frames:v 1 $outputPath -hide_banner -loglevel error";
 
     if (progressCallback != null)
       _config.enableStatisticsCallback(progressCallback);
@@ -461,13 +461,13 @@ class VideoEditorController extends ChangeNotifier with WidgetsBindingObserver {
     //RESULT//s
     //------//
     if (code == 0) {
-      print("SUCCESS FRAME EXTRACTION AT $outputPath");
+      print("SUCCESS COVER EXTRACTION AT $outputPath");
       return File(outputPath);
     } else if (code == 255) {
-      print("USER CANCEL FRAME EXTRACTION");
+      print("USER CANCEL COVER EXTRACTION");
       return null;
     } else {
-      print("ERROR ON FRAME EXTRACTION (CODE $code)");
+      print("ERROR ON COVER EXTRACTION (CODE $code)");
       return null;
     }
   }
