@@ -14,6 +14,7 @@ class TrimSlider extends StatefulWidget {
     @required this.controller,
     this.height = 60,
     this.quality = 25,
+    this.maxDuration,
   }) : super(key: key);
 
   ///**Quality of thumbnails:** 0 is the worst quality and 100 is the highest quality.
@@ -21,6 +22,9 @@ class TrimSlider extends StatefulWidget {
 
   ///It is the height of the thumbnails
   final double height;
+
+  ///The max duration that can be trim video.
+  final Duration maxDuration;
 
   ///Essential argument for the functioning of the Widget
   final VideoEditorController controller;
@@ -34,12 +38,16 @@ class _TrimSliderState extends State<TrimSlider> {
 
   Rect _rect;
   Size _layout = Size.zero;
+  Duration _maxDuration = Duration.zero;
   VideoPlayerController _controller;
 
   @override
   void initState() {
     _controller = widget.controller.video;
-
+    final Duration duration = _controller.value.duration;
+    _maxDuration = widget.maxDuration == null || _maxDuration > duration
+        ? duration
+        : widget.maxDuration;
     super.initState();
   }
 
@@ -118,9 +126,7 @@ class _TrimSliderState extends State<TrimSlider> {
 
     final Duration diff = _getDurationDiff(left, width);
 
-    if (left >= 0 &&
-        left + width <= _layout.width &&
-        diff <= widget.controller.maxDuration) {
+    if (left >= 0 && left + width <= _layout.width && diff <= _maxDuration) {
       _rect = Rect.fromLTWH(left, _rect.top, width, _rect.height);
       _updateControllerTrim();
     }
@@ -136,11 +142,11 @@ class _TrimSliderState extends State<TrimSlider> {
 
     if (_rect == null) {
       final Duration diff = _getDurationDiff(0.0, _layout.width);
-      if (diff >= widget.controller.maxDuration)
+      if (diff >= _maxDuration)
         _rect = Rect.fromLTWH(
           0.0,
           0.0,
-          (widget.controller.maxDuration.inMilliseconds /
+          (_maxDuration.inMilliseconds /
                   _controller.value.duration.inMilliseconds) *
               _layout.width,
           widget.height,
