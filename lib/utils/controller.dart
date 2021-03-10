@@ -328,8 +328,9 @@ class VideoEditorController extends ChangeNotifier with WidgetsBindingObserver {
     VideoExportPreset preset = VideoExportPreset.none,
   }) async {
     final FlutterFFmpegConfig _config = FlutterFFmpegConfig();
+    final String tempPath = (await getTemporaryDirectory()).path;
     final String videoPath = file.path;
-    final String outputPath = _editionTempDir.path + _editionName + ".$format";
+    final String outputPath = tempPath + "/" + _editionName + ".$format";
 
     //-----------------//
     //CALCULATE FILTERS//
@@ -429,8 +430,9 @@ class VideoEditorController extends ChangeNotifier with WidgetsBindingObserver {
   }) async {
     final FlutterFFmpegConfig _config = FlutterFFmpegConfig();
     String timeFormat = _printDuration(_coverTime());
+    final String tempPath = (await getTemporaryDirectory()).path;
     final String outputPath =
-        _editionTempDir.path + _editionName + timeFormat + ".jpg";
+        tempPath + "/" + _editionName + timeFormat + ".jpg";
 
     //-----------------//
     //CALCULATE FILTERS//
