@@ -73,6 +73,9 @@ class VideoEditorController extends ChangeNotifier with WidgetsBindingObserver {
   Duration _trimEnd = Duration.zero;
   Duration _trimStart = Duration.zero;
 
+  ///The max duration that can be trim video.
+  Duration maxDuration = Duration.zero;
+
   double _coverPos = 0.0;
   List _frames;
   int _coverIndex;
@@ -98,7 +101,15 @@ class VideoEditorController extends ChangeNotifier with WidgetsBindingObserver {
         (await getTemporaryDirectory()).path + "/$_editionName/";
     _editionTempDir = new Directory(tempPath);
 
-    _updateTrimRange();
+    maxDuration = maxDuration == null || maxDuration > videoDuration
+        ? videoDuration
+        : maxDuration;
+
+    // Trim straight away when maxDuration is lower than video duration
+    if (maxDuration < videoDuration)
+      updateTrim(0.0, maxDuration.inSeconds / videoDuration.inSeconds);
+    else
+      _updateTrimRange();
     notifyListeners();
   }
 
@@ -203,6 +214,8 @@ class VideoEditorController extends ChangeNotifier with WidgetsBindingObserver {
   }
 
   void _updateTrimRange() async {
+    print("_updateTrimRange $isTrimming");
+
     _trimEnd = videoDuration * _maxTrim;
     _trimStart = videoDuration * _minTrim;
 
@@ -500,8 +513,14 @@ class VideoEditorController extends ChangeNotifier with WidgetsBindingObserver {
     final String trim = _minTrim == 0.0 && _maxTrim == 1.0
         ? ""
         : "-ss $_trimStart -to $_trimEnd";
-    final String ssTrim = _minTrim == 0.0 ? "" : "-ss $_trimStart";
-    final String toTrim = _maxTrim == 1.0 ? "" : "-to $_trimEnd";
+    final String ssTrim =
+        _minTrim == 0.0 && _maxTrim == 1.0 ? "" : "-ss $_trimStart";
+    final String toTrim =
+        _minTrim == 0.0 && _maxTrim == 1.0 ? "" : "-to $_trimEnd";
+
+    print(
+        "FRAMES EXTRACTION trim= $trim _minTrim=$_minTrim _maxTrim=$_maxTrim _trimStart=$_trimStart _trimEnd=$_trimEnd");
+
     final String crop = _minCrop == Offset.zero && _maxCrop == Offset(1.0, 1.0)
         ? ""
         : await _getCrop(videoPath);
@@ -525,6 +544,8 @@ class VideoEditorController extends ChangeNotifier with WidgetsBindingObserver {
     // Create a thumbnail image every X seconds of the video: https://trac.ffmpeg.org/wiki/Create%20a%20thumbnail%20image%20every%20X%20seconds%20of%20the%20video
     final String execute =
         " $ssTrim -i $videoPath $toTrim -y -vf \"fps=$fps,$filter\" $outputPath -hide_banner -loglevel error";
+
+    print("FRAMES EXTRACTION execute= $execute");
 
     if (progressCallback != null)
       _config.enableStatisticsCallback(progressCallback);
