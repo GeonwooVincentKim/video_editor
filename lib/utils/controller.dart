@@ -452,7 +452,7 @@ class VideoEditorController extends ChangeNotifier with WidgetsBindingObserver {
     filters.removeWhere((item) => item.isEmpty);
     final String filter = filters.isNotEmpty ? "" + filters.join(",") : "";
     final String execute =
-        " -ss $timeFormat -i ${file.path} -vf \"$filter\" -frames:v 1 $outputPath -hide_banner -loglevel error";
+        " -ss $timeFormat -i ${file.path} -y -vf \"$filter\" -frames:v 1 $outputPath -hide_banner -loglevel error";
 
     if (progressCallback != null)
       _config.enableStatisticsCallback(progressCallback);
@@ -524,7 +524,7 @@ class VideoEditorController extends ChangeNotifier with WidgetsBindingObserver {
         "%03d.jpg";
     // Create a thumbnail image every X seconds of the video: https://trac.ffmpeg.org/wiki/Create%20a%20thumbnail%20image%20every%20X%20seconds%20of%20the%20video
     final String execute =
-        " $ssTrim -i $videoPath $toTrim -vf \"fps=$fps,$filter\" $outputPath -hide_banner -loglevel error";
+        " $ssTrim -i $videoPath $toTrim -y -vf \"fps=$fps,$filter\" $outputPath -hide_banner -loglevel error";
 
     if (progressCallback != null)
       _config.enableStatisticsCallback(progressCallback);
