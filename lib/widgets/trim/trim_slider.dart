@@ -39,7 +39,6 @@ class _TrimSliderState extends State<TrimSlider> {
   @override
   void initState() {
     _controller = widget.controller.video;
-
     super.initState();
   }
 
@@ -127,28 +126,10 @@ class _TrimSliderState extends State<TrimSlider> {
   }
 
   void _createTrimRect() {
-    void _normalRect() {
-      _rect = Rect.fromPoints(
-        Offset(widget.controller.minTrim * _layout.width, 0.0),
-        Offset(widget.controller.maxTrim * _layout.width, widget.height),
-      );
-    }
-
-    if (_rect == null) {
-      final Duration diff = _getDurationDiff(0.0, _layout.width);
-      if (diff >= widget.controller.maxDuration)
-        _rect = Rect.fromLTWH(
-          0.0,
-          0.0,
-          (widget.controller.maxDuration.inMilliseconds /
-                  _controller.value.duration.inMilliseconds) *
-              _layout.width,
-          widget.height,
-        );
-      else
-        _normalRect();
-    } else
-      _normalRect();
+    _rect = Rect.fromPoints(
+      Offset(widget.controller.minTrim * _layout.width, 0.0),
+      Offset(widget.controller.maxTrim * _layout.width, widget.height),
+    );
   }
 
   //----//

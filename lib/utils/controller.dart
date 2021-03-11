@@ -47,11 +47,13 @@ class VideoEditorController extends ChangeNotifier with WidgetsBindingObserver {
   ///Constructs a [VideoEditorController] that edits a video from a file.
   VideoEditorController.file(
     this.file, {
+    Duration maxDuration,
     TrimSliderStyle trimStyle,
     CropGridStyle cropStyle,
     CoverSliderStyle coverStyle,
   })  : assert(file != null),
         _video = VideoPlayerController.file(file),
+        this._maxDuration = maxDuration,
         this.cropStyle = cropStyle ?? CropGridStyle(),
         this.trimStyle = trimStyle ?? TrimSliderStyle(),
         this.coverStyle = coverStyle ?? CoverSliderStyle();
@@ -74,10 +76,10 @@ class VideoEditorController extends ChangeNotifier with WidgetsBindingObserver {
   Duration _trimStart = Duration.zero;
 
   ///The max duration that can be trim video.
-  Duration maxDuration = Duration.zero;
+  Duration _maxDuration;
 
   double _coverPos = 0.0;
-  List _frames;
+  List<dynamic> _frames;
   int _coverIndex;
   File _cover;
 
@@ -101,15 +103,14 @@ class VideoEditorController extends ChangeNotifier with WidgetsBindingObserver {
         (await getTemporaryDirectory()).path + "/$_editionName/";
     _editionTempDir = new Directory(tempPath);
 
-    maxDuration = maxDuration == null || maxDuration > videoDuration
-        ? videoDuration
-        : maxDuration;
-
+    _maxDuration = _maxDuration == null ? videoDuration : _maxDuration;
     // Trim straight away when maxDuration is lower than video duration
-    if (maxDuration < videoDuration)
-      updateTrim(0.0, maxDuration.inSeconds / videoDuration.inSeconds);
+    if (_maxDuration < videoDuration)
+      updateTrim(
+          0.0, _maxDuration.inMilliseconds / videoDuration.inMilliseconds);
     else
       _updateTrimRange();
+
     notifyListeners();
   }
 
@@ -214,8 +215,6 @@ class VideoEditorController extends ChangeNotifier with WidgetsBindingObserver {
   }
 
   void _updateTrimRange() async {
-    print("_updateTrimRange $isTrimming");
-
     _trimEnd = videoDuration * _maxTrim;
     _trimStart = videoDuration * _minTrim;
 
@@ -241,6 +240,8 @@ class VideoEditorController extends ChangeNotifier with WidgetsBindingObserver {
   ///Get the **MaxTrim** (Range is `0.0` to `1.0`).
   double get maxTrim => _maxTrim;
 
+  Duration get maxDuration => _maxDuration;
+
   ///Get the **VideoPosition** (Range is `0.0` to `1.0`).
   double get trimPosition =>
       videoPosition.inMilliseconds / videoDuration.inMilliseconds;
@@ -253,13 +254,13 @@ class VideoEditorController extends ChangeNotifier with WidgetsBindingObserver {
     _isExtractingFrames = true;
     _coverPos = 0.0;
     _coverIndex = 0;
-    //_cover = null;
-    _frames = await extractFrames();
+    final listFrames = await extractFrames();
     // Sort files to be sure to store them in alphabetical order
-    if (_frames != null) {
-      _frames.sort((a, b) {
+    if (listFrames != null) {
+      listFrames.sort((a, b) {
         return a.path.compareTo(b.path);
       });
+      _frames = listFrames;
       _cover = new File(_frames.first.path);
       _isExtractingFrames = false;
     }
@@ -513,10 +514,8 @@ class VideoEditorController extends ChangeNotifier with WidgetsBindingObserver {
     final String trim = _minTrim == 0.0 && _maxTrim == 1.0
         ? ""
         : "-ss $_trimStart -to $_trimEnd";
-    final String ssTrim =
-        _minTrim == 0.0 && _maxTrim == 1.0 ? "" : "-ss $_trimStart";
-    final String toTrim =
-        _minTrim == 0.0 && _maxTrim == 1.0 ? "" : "-to $_trimEnd";
+    final String ssTrim = "-ss $_trimStart";
+    final String toTrim = "-to ${_trimEnd - _trimStart}";
 
     print(
         "FRAMES EXTRACTION trim= $trim _minTrim=$_minTrim _maxTrim=$_maxTrim _trimStart=$_trimStart _trimEnd=$_trimEnd");
@@ -545,8 +544,6 @@ class VideoEditorController extends ChangeNotifier with WidgetsBindingObserver {
     final String execute =
         " $ssTrim -i $videoPath $toTrim -y -vf \"fps=$fps,$filter\" $outputPath -hide_banner -loglevel error";
 
-    print("FRAMES EXTRACTION execute= $execute");
-
     if (progressCallback != null)
       _config.enableStatisticsCallback(progressCallback);
     final int code = await _ffmpeg.execute(execute);
@@ -557,7 +554,7 @@ class VideoEditorController extends ChangeNotifier with WidgetsBindingObserver {
     //------//
     if (code == 0) {
       print("SUCCESS FRAMES EXTRACTION AT $outputPath");
-      return localProcessDir.list(followLinks: false).toList();
+      return localProcessDir.listSync(followLinks: false);
     } else if (code == 255) {
       print("USER CANCEL FRAMES EXTRACTION");
       return null;
