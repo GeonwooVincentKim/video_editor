@@ -104,7 +104,7 @@ class _TrimSliderState extends State<TrimSlider> {
       if (_progressTrim >= _rect.right || _progressTrim < _rect.left)
         _controllerSeekTo(_progressTrim);
       _updateControllerIsTrimming(false);
-      _updateControllerTrim();
+      if (_boundary.value != _TrimBoundaries.progress) _updateControllerTrim();
     }
   }
 
