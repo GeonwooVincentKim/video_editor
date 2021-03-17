@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'package:flutter_ffmpeg/log_level.dart';
 import 'package:path/path.dart' as path;
 import 'package:flutter/material.dart';
 import 'package:path_provider/path_provider.dart';
@@ -342,6 +343,7 @@ class VideoEditorController extends ChangeNotifier with WidgetsBindingObserver {
     VideoExportPreset preset = VideoExportPreset.none,
   }) async {
     final FlutterFFmpegConfig _config = FlutterFFmpegConfig();
+    _config.setLogLevel(LogLevel.AV_LOG_WARNING);
     final String tempPath = (await getTemporaryDirectory()).path;
     final String videoPath = file.path;
     final String outputPath = tempPath +
@@ -448,6 +450,7 @@ class VideoEditorController extends ChangeNotifier with WidgetsBindingObserver {
     void Function(Statistics) progressCallback,
   }) async {
     final FlutterFFmpegConfig _config = FlutterFFmpegConfig();
+    _config.setLogLevel(LogLevel.AV_LOG_WARNING);
     String timeFormat = _printDuration(_coverTime());
     final String tempPath = (await getTemporaryDirectory()).path;
     final String outputPath =
@@ -502,6 +505,7 @@ class VideoEditorController extends ChangeNotifier with WidgetsBindingObserver {
     VideoExportPreset preset = VideoExportPreset.none,
   }) async {
     final FlutterFFmpegConfig _config = FlutterFFmpegConfig();
+    _config.disableLogs();
     final String videoPath = file.path;
     final Directory localProcessDir = new Directory(_editionTempDir.path +
         DateTime.now().millisecondsSinceEpoch.toString() +
@@ -521,9 +525,6 @@ class VideoEditorController extends ChangeNotifier with WidgetsBindingObserver {
         : "-ss $_trimStart -to $_trimEnd";
     final String ssTrim = "-ss $_trimStart";
     final String toTrim = "-to ${_trimEnd - _trimStart}";
-
-    print(
-        "FRAMES EXTRACTION trim= $trim _minTrim=$_minTrim _maxTrim=$_maxTrim _trimStart=$_trimStart _trimEnd=$_trimEnd");
 
     final String crop = _minCrop == Offset.zero && _maxCrop == Offset(1.0, 1.0)
         ? ""
