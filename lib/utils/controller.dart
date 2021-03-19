@@ -49,12 +49,14 @@ class VideoEditorController extends ChangeNotifier with WidgetsBindingObserver {
   VideoEditorController.file(
     this.file, {
     Duration maxDuration,
+    bool skipFramesExtraction = false,
     TrimSliderStyle trimStyle,
     CropGridStyle cropStyle,
     CoverSliderStyle coverStyle,
   })  : assert(file != null),
         _video = VideoPlayerController.file(file),
         this._maxDuration = maxDuration,
+        this._skipFramesExtraction = skipFramesExtraction,
         this.cropStyle = cropStyle ?? CropGridStyle(),
         this.trimStyle = trimStyle ?? TrimSliderStyle(),
         this.coverStyle = coverStyle ?? CoverSliderStyle();
@@ -78,6 +80,8 @@ class VideoEditorController extends ChangeNotifier with WidgetsBindingObserver {
 
   ///The max duration that can be trim video.
   Duration _maxDuration;
+
+  bool _skipFramesExtraction;
 
   double _coverPos = 0.0;
   List<dynamic> _frames;
@@ -105,8 +109,9 @@ class VideoEditorController extends ChangeNotifier with WidgetsBindingObserver {
     _editionTempDir = new Directory(tempPath);
 
     _maxDuration = _maxDuration == null ? videoDuration : _maxDuration;
+
     // Trim straight away when maxDuration is lower than video duration
-    if (_maxDuration < videoDuration)
+    if (_maxDuration < videoDuration && !_skipFramesExtraction)
       updateTrim(
           0.0, _maxDuration.inMilliseconds / videoDuration.inMilliseconds);
     else
@@ -211,7 +216,7 @@ class VideoEditorController extends ChangeNotifier with WidgetsBindingObserver {
   void updateTrim(double min, double max) {
     _minTrim = min;
     _maxTrim = max;
-    _updateTrimRange();
+    if (!_skipFramesExtraction) _updateTrimRange();
     notifyListeners();
   }
 
@@ -219,7 +224,7 @@ class VideoEditorController extends ChangeNotifier with WidgetsBindingObserver {
     _trimEnd = videoDuration * _maxTrim;
     _trimStart = videoDuration * _minTrim;
 
-    if (!isTrimming) _initCover();
+    if (!isTrimming && !_skipFramesExtraction) _initCover();
 
     if (_trimStart != Duration.zero || _trimEnd != videoDuration)
       _isTrimmed = true;
@@ -252,6 +257,8 @@ class VideoEditorController extends ChangeNotifier with WidgetsBindingObserver {
   //----------//
 
   void _initCover() async {
+    if (_skipFramesExtraction) return null;
+
     _isExtractingFrames = true;
     _coverPos = 0.0;
     _coverIndex = 0;
@@ -346,9 +353,9 @@ class VideoEditorController extends ChangeNotifier with WidgetsBindingObserver {
     _config.setLogLevel(LogLevel.AV_LOG_WARNING);
     final String tempPath = (await getTemporaryDirectory()).path;
     final String videoPath = file.path;
-    final String outputPath = tempPath +
+    final String outputPath = tempPath.toString() +
         "/" +
-        _editionName +
+        _editionName.toString() +
         "_" +
         DateTime.now().millisecondsSinceEpoch.toString() +
         ".$format";
@@ -504,6 +511,8 @@ class VideoEditorController extends ChangeNotifier with WidgetsBindingObserver {
     void Function(Statistics) progressCallback,
     VideoExportPreset preset = VideoExportPreset.none,
   }) async {
+    if (_skipFramesExtraction) return null;
+
     final FlutterFFmpegConfig _config = FlutterFFmpegConfig();
     _config.disableLogs();
     final String videoPath = file.path;
