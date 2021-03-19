@@ -28,7 +28,7 @@ class _VideoViewerState extends State<VideoViewer> {
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
-      onDoubleTap: () {
+      onTap: () {
         if (_controller.value.isPlaying)
           _controller.pause();
         else
