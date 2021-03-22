@@ -98,13 +98,19 @@ class _TrimSliderState extends State<TrimSlider> {
     }
   }
 
-  void _onHorizontalDragEnd(_) {
+  void _onHorizontalDragEnd(DragEndDetails details) {
     if (_boundary.value != null) {
       final double _progressTrim = _getTrimPosition();
+
       if (_progressTrim >= _rect.right || _progressTrim < _rect.left)
         _controllerSeekTo(_progressTrim);
+
+      if (_boundary.value != _TrimBoundaries.progress) {
+        if (_boundary.value != _TrimBoundaries.right)
+          _controllerSeekTo(_rect.left);
+        _updateControllerTrim();
+      }
       _updateControllerIsTrimming(false);
-      if (_boundary.value != _TrimBoundaries.progress) _updateControllerTrim();
     }
   }
 
