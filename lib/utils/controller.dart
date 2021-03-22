@@ -11,7 +11,6 @@ import 'package:flutter_ffmpeg/flutter_ffmpeg.dart';
 enum RotateDirection { left, right }
 
 enum VideExportFramesExtractionMode { normal, opti }
-const Duration MAX_DURATION_FRAMES_OPTI = Duration(seconds: 90);
 
 ///A preset is a collection of options that will provide a certain encoding speed to compression ratio.
 ///
@@ -54,6 +53,7 @@ class VideoEditorController extends ChangeNotifier with WidgetsBindingObserver {
     Duration maxDuration,
     bool skipFramesExtraction = false,
     int fpsExtraction = 5,
+    Duration framesOptiTimeLimit,
     TrimSliderStyle trimStyle,
     CropGridStyle cropStyle,
     CoverSliderStyle coverStyle,
@@ -62,6 +62,7 @@ class VideoEditorController extends ChangeNotifier with WidgetsBindingObserver {
         this._maxDuration = maxDuration,
         this._skipFramesExtraction = skipFramesExtraction,
         this._fpsExtraction = fpsExtraction,
+        this._framesOptiTimeLimit = framesOptiTimeLimit,
         this.cropStyle = cropStyle ?? CropGridStyle(),
         this.trimStyle = trimStyle ?? TrimSliderStyle(),
         this.coverStyle = coverStyle ?? CoverSliderStyle();
@@ -100,6 +101,7 @@ class VideoEditorController extends ChangeNotifier with WidgetsBindingObserver {
 
   VideoPlayerController _video;
   VideExportFramesExtractionMode _framesExtractionMode;
+  Duration _framesOptiTimeLimit;
 
   //----------------//
   //VIDEO CONTROLLER//
@@ -117,7 +119,9 @@ class VideoEditorController extends ChangeNotifier with WidgetsBindingObserver {
     _editionTempDir = new Directory(tempPath);
 
     _framesExtractionMode = VideExportFramesExtractionMode.normal;
-    if (videoDuration <= MAX_DURATION_FRAMES_OPTI)
+    _framesOptiTimeLimit =
+        _framesOptiTimeLimit == null ? videoDuration : _framesOptiTimeLimit;
+    if (videoDuration < _framesOptiTimeLimit)
       _framesExtractionMode = VideExportFramesExtractionMode.opti;
 
     _maxDuration = _maxDuration == null ? videoDuration : _maxDuration;
