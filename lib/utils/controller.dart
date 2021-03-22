@@ -82,6 +82,7 @@ class VideoEditorController extends ChangeNotifier with WidgetsBindingObserver {
   Duration _maxDuration;
 
   bool _skipFramesExtraction;
+  int _framesExecutionId;
 
   double _coverPos = 0.0;
   List<dynamic> _frames;
@@ -259,6 +260,13 @@ class VideoEditorController extends ChangeNotifier with WidgetsBindingObserver {
   void _initCover() async {
     if (_skipFramesExtraction) return null;
 
+    final executions = await _ffmpeg.listExecutions();
+    if (executions.length > 0) _ffmpeg.cancel();
+
+    _getFrames();
+  }
+
+  void _getFrames() async {
     _isExtractingFrames = true;
     _coverPos = 0.0;
     _coverIndex = 0;
@@ -512,6 +520,8 @@ class VideoEditorController extends ChangeNotifier with WidgetsBindingObserver {
     VideoExportPreset preset = VideoExportPreset.none,
   }) async {
     if (_skipFramesExtraction) return null;
+
+    print("ECXTRACT FRAMES !!!");
 
     final FlutterFFmpegConfig _config = FlutterFFmpegConfig();
     _config.disableLogs();
