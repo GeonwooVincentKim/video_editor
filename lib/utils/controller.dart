@@ -10,6 +10,9 @@ import 'package:flutter_ffmpeg/flutter_ffmpeg.dart';
 
 enum RotateDirection { left, right }
 
+enum VideExportFramesExtractionMode { normal, opti }
+const Duration MAX_DURATION_FRAMES_OPTI = Duration(seconds: 90);
+
 ///A preset is a collection of options that will provide a certain encoding speed to compression ratio.
 ///
 ///A slower preset will provide better compression (compression is quality per filesize).
@@ -50,6 +53,7 @@ class VideoEditorController extends ChangeNotifier with WidgetsBindingObserver {
     this.file, {
     Duration maxDuration,
     bool skipFramesExtraction = false,
+    int fpsExtraction = 5,
     TrimSliderStyle trimStyle,
     CropGridStyle cropStyle,
     CoverSliderStyle coverStyle,
@@ -57,6 +61,7 @@ class VideoEditorController extends ChangeNotifier with WidgetsBindingObserver {
         _video = VideoPlayerController.file(file),
         this._maxDuration = maxDuration,
         this._skipFramesExtraction = skipFramesExtraction,
+        this._fpsExtraction = fpsExtraction,
         this.cropStyle = cropStyle ?? CropGridStyle(),
         this.trimStyle = trimStyle ?? TrimSliderStyle(),
         this.coverStyle = coverStyle ?? CoverSliderStyle();
@@ -82,17 +87,19 @@ class VideoEditorController extends ChangeNotifier with WidgetsBindingObserver {
   Duration _maxDuration;
 
   bool _skipFramesExtraction;
-  int _framesExecutionId;
+  int _fpsExtraction;
 
   double _coverPos = 0.0;
   List<dynamic> _frames;
-  int _coverIndex;
+  List<dynamic> _selectionFrames;
+  ValueNotifier<int> _coverIndex = ValueNotifier<int>(null);
   File _cover;
 
   String _editionName;
   Directory _editionTempDir;
 
   VideoPlayerController _video;
+  VideExportFramesExtractionMode _framesExtractionMode;
 
   //----------------//
   //VIDEO CONTROLLER//
@@ -108,6 +115,10 @@ class VideoEditorController extends ChangeNotifier with WidgetsBindingObserver {
     final String tempPath =
         (await getTemporaryDirectory()).path + "/$_editionName/";
     _editionTempDir = new Directory(tempPath);
+
+    _framesExtractionMode = VideExportFramesExtractionMode.normal;
+    if (videoDuration <= MAX_DURATION_FRAMES_OPTI)
+      _framesExtractionMode = VideExportFramesExtractionMode.opti;
 
     _maxDuration = _maxDuration == null ? videoDuration : _maxDuration;
 
@@ -263,30 +274,49 @@ class VideoEditorController extends ChangeNotifier with WidgetsBindingObserver {
     final executions = await _ffmpeg.listExecutions();
     if (executions.length > 0) _ffmpeg.cancel();
 
-    _getFrames();
+    if (_framesExtractionMode == VideExportFramesExtractionMode.normal) {
+      _getFrames(false);
+      notifyListeners();
+    } else if (_framesExtractionMode == VideExportFramesExtractionMode.opti) {
+      if (_frames == null) {
+        _getFrames(true);
+      } else {
+        _selectionFrames = _frames.sublist(
+            _trimStart.inSeconds * _fpsExtraction,
+            _trimEnd.inSeconds * _fpsExtraction);
+        _cover = new File(_selectionFrames.first.path);
+      }
+      notifyListeners();
+    }
   }
 
-  void _getFrames() async {
+  void _getFrames(bool fullFrames) async {
     _isExtractingFrames = true;
     _coverPos = 0.0;
-    _coverIndex = 0;
-    final listFrames = await extractFrames();
+    final listFrames = await extractFrames(fullFrames: fullFrames);
     // Sort files to be sure to store them in alphabetical order
     if (listFrames != null) {
       listFrames.sort((a, b) {
         return a.path.compareTo(b.path);
       });
       _frames = listFrames;
-      _cover = new File(_frames.first.path);
+
+      if (_framesExtractionMode == VideExportFramesExtractionMode.opti) {
+        _selectionFrames = listFrames.sublist(
+            _trimStart.inSeconds * _fpsExtraction,
+            _trimEnd.inSeconds * _fpsExtraction);
+        _cover = new File(_selectionFrames.first.path);
+      } else
+        _cover = new File(_frames.first.path);
+      _coverIndex.value = 0;
       _isExtractingFrames = false;
     }
-    notifyListeners();
   }
 
   void updateCover(double coverPos) async {
     _coverPos = coverPos;
-    _coverIndex = (_frames.length * coverPos).toInt();
-    _cover = new File(_frames[_coverIndex].path);
+    _coverIndex.value = (frames.length * coverPos).toInt();
+    _cover = new File(frames[_coverIndex.value].path);
     notifyListeners();
   }
 
@@ -303,8 +333,12 @@ class VideoEditorController extends ChangeNotifier with WidgetsBindingObserver {
   bool get isExtractingFrames => _isExtractingFrames;
   double get coverPosition => _coverPos;
   File get cover => _cover;
-  int get coverIndex => _coverIndex;
-  List<dynamic> get frames => _frames;
+  ValueNotifier<int> get coverIndex => _coverIndex;
+  List<dynamic> get frames {
+    return _framesExtractionMode == VideExportFramesExtractionMode.normal
+        ? _frames
+        : _selectionFrames;
+  }
 
   ///Don't touch this >:)
 
@@ -515,13 +549,11 @@ class VideoEditorController extends ChangeNotifier with WidgetsBindingObserver {
   Future<List<dynamic>> extractFrames({
     String format = "mp4",
     double scale = 1.0,
-    double fps = 5.0,
+    bool fullFrames = false,
     void Function(Statistics) progressCallback,
     VideoExportPreset preset = VideoExportPreset.none,
   }) async {
     if (_skipFramesExtraction) return null;
-
-    print("ECXTRACT FRAMES !!!");
 
     final FlutterFFmpegConfig _config = FlutterFFmpegConfig();
     _config.disableLogs();
@@ -539,11 +571,11 @@ class VideoEditorController extends ChangeNotifier with WidgetsBindingObserver {
     //CALCULATE FILTERS//
     //-----------------//
     final String gif = format != "gif" ? "" : "fps=10 -loop 0";
-    final String trim = _minTrim == 0.0 && _maxTrim == 1.0
+    final String trim = _minTrim == 0.0 && _maxTrim == 1.0 || fullFrames
         ? ""
         : "-ss $_trimStart -to $_trimEnd";
-    final String ssTrim = "-ss $_trimStart";
-    final String toTrim = "-to ${_trimEnd - _trimStart}";
+    final String ssTrim = fullFrames ? "" : "-ss $_trimStart";
+    final String toTrim = fullFrames ? "" : "-to ${_trimEnd - _trimStart}";
 
     final String crop = _minCrop == Offset.zero && _maxCrop == Offset(1.0, 1.0)
         ? ""
@@ -567,7 +599,7 @@ class VideoEditorController extends ChangeNotifier with WidgetsBindingObserver {
         "%03d.jpg";
     // Create a thumbnail image every X seconds of the video: https://trac.ffmpeg.org/wiki/Create%20a%20thumbnail%20image%20every%20X%20seconds%20of%20the%20video
     final String execute =
-        " $ssTrim -i $videoPath $toTrim -y -vf \"fps=$fps,$filter\" $outputPath -hide_banner -loglevel error";
+        " $ssTrim -i $videoPath $toTrim -y -vf \"fps=$_fpsExtraction,$filter\" $outputPath -hide_banner -loglevel error";
 
     if (progressCallback != null)
       _config.enableStatisticsCallback(progressCallback);
