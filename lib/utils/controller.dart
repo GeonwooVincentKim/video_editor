@@ -558,6 +558,7 @@ class VideoEditorController extends ChangeNotifier with WidgetsBindingObserver {
     VideoExportPreset preset = VideoExportPreset.none,
   }) async {
     if (_skipFramesExtraction) return null;
+    Stopwatch stopwatch = new Stopwatch()..start();
 
     final FlutterFFmpegConfig _config = FlutterFFmpegConfig();
     _config.disableLogs();
@@ -603,7 +604,7 @@ class VideoEditorController extends ChangeNotifier with WidgetsBindingObserver {
         "%03d.jpg";
     // Create a thumbnail image every X seconds of the video: https://trac.ffmpeg.org/wiki/Create%20a%20thumbnail%20image%20every%20X%20seconds%20of%20the%20video
     final String execute =
-        " $ssTrim -i $videoPath $toTrim -y -vf \"fps=$_fpsExtraction,$filter\" $outputPath -hide_banner -loglevel error";
+        " $ssTrim -i $videoPath $toTrim -y -vf \"fps=$_fpsExtraction,$filter\" -an $outputPath";
 
     if (progressCallback != null)
       _config.enableStatisticsCallback(progressCallback);
@@ -614,13 +615,15 @@ class VideoEditorController extends ChangeNotifier with WidgetsBindingObserver {
     //RESULT//
     //------//
     if (code == 0) {
-      print("SUCCESS FRAMES EXTRACTION AT $outputPath");
+      print(
+          "SUCCESS FRAMES EXTRACTION executed in ${stopwatch.elapsed} (fps:$_fpsExtraction) AT $outputPath ");
       return localProcessDir.listSync(followLinks: false);
     } else if (code == 255) {
-      print("USER CANCEL FRAMES EXTRACTION");
+      print("USER CANCEL FRAMES EXTRACTION executed in ${stopwatch.elapsed}");
       return null;
     } else {
-      print("ERROR ON FRAMES EXTRACTION (CODE $code)");
+      print(
+          "ERROR ON FRAMES EXTRACTION (CODE $code) executed in ${stopwatch.elapsed}");
       return null;
     }
   }
