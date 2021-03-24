@@ -54,6 +54,7 @@ class VideoEditorController extends ChangeNotifier with WidgetsBindingObserver {
     bool skipFramesExtraction = false,
     int fpsExtraction = 5,
     Duration framesOptiTimeLimit,
+    Duration defaultCoverTime = Duration.zero,
     TrimSliderStyle trimStyle,
     CropGridStyle cropStyle,
     CoverSliderStyle coverStyle,
@@ -63,6 +64,7 @@ class VideoEditorController extends ChangeNotifier with WidgetsBindingObserver {
         this._skipFramesExtraction = skipFramesExtraction,
         this._fpsExtraction = fpsExtraction,
         this._framesOptiTimeLimit = framesOptiTimeLimit,
+        this._defaultCoverTime = defaultCoverTime,
         this.cropStyle = cropStyle ?? CropGridStyle(),
         this.trimStyle = trimStyle ?? TrimSliderStyle(),
         this.coverStyle = coverStyle ?? CoverSliderStyle();
@@ -90,6 +92,8 @@ class VideoEditorController extends ChangeNotifier with WidgetsBindingObserver {
   bool _skipFramesExtraction;
   int _fpsExtraction;
 
+  bool _defaultCover = true;
+  Duration _defaultCoverTime;
   double _coverPos = 0.0;
   List<dynamic> _frames;
   List<dynamic> _selectionFrames;
@@ -318,6 +322,7 @@ class VideoEditorController extends ChangeNotifier with WidgetsBindingObserver {
   }
 
   void updateCover(double coverPos) async {
+    _defaultCover = false;
     _coverPos = coverPos;
     _coverIndex.value = (frames.length * coverPos).toInt();
     _cover = new File(frames[_coverIndex.value].path);
@@ -326,6 +331,13 @@ class VideoEditorController extends ChangeNotifier with WidgetsBindingObserver {
 
   /// Return the position of the cover in Duration format on all the video (no trim)
   Duration _coverTime() {
+    if (_defaultCover) {
+      if (videoDuration > _defaultCoverTime)
+        return _defaultCoverTime;
+      else
+        return videoDuration;
+    }
+
     return new Duration(
         milliseconds: (_isTrimmed
                 ? ((_trimEnd - _trimStart).inMilliseconds * _coverPos) +

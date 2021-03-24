@@ -171,8 +171,8 @@ class _ThumbnailSliderState extends State<ThumbnailSlider> {
                             alignment: Alignment.center,
                             height: _size.height,
                             width: _size.width,
-                            child: _croppedThumbnail(_size.width, data[index],
-                                data[index > 0 ? index - 1 : 0]),
+                            child: _croppedThumbnail(_size.width, _size.height,
+                                data[index], data[index > 0 ? index - 1 : 0]),
                             //_notCroppedThumbnail(data[index]),
                           ),
                         ),
@@ -206,18 +206,20 @@ class _ThumbnailSliderState extends State<ThumbnailSlider> {
   }
 
   /// Use overflow widget to hide cropped crop painted area in thumbnails
-  Widget _croppedThumbnail(double size, Uint8List data, Uint8List prevData) {
+  Widget _croppedThumbnail(
+      double sizeWidth, double sizeHeight, Uint8List data, Uint8List prevData) {
+    final bool _modePortrait = sizeHeight >= sizeWidth;
     return new Container(
-      width: size,
-      height: size,
+      width: sizeWidth,
+      height: _modePortrait ? sizeWidth : sizeHeight,
       child: ClipRect(
         child: OverflowBox(
           alignment: Alignment.center,
           child: FittedBox(
             fit: BoxFit.fitWidth,
             child: Container(
-              width: size,
-              height: size / widget.controller.video.value.aspectRatio,
+              width: sizeWidth,
+              height: sizeWidth / widget.controller.video.value.aspectRatio,
               child: ClipRRect(
                 child: Stack(children: [
                   Image(
@@ -228,14 +230,16 @@ class _ThumbnailSliderState extends State<ThumbnailSlider> {
                     height: _size.height,
                     alignment: Alignment.topLeft,
                   ),
-                  CustomPaint(
-                    size: _size,
-                    painter: CropGridPainter(
-                      _rect,
-                      showGrid: false,
-                      style: widget.controller.cropStyle,
-                    ),
-                  )
+                  _modePortrait
+                      ? CustomPaint(
+                          size: _size,
+                          painter: CropGridPainter(
+                            _rect,
+                            showGrid: false,
+                            style: widget.controller.cropStyle,
+                          ),
+                        )
+                      : Container()
                 ]),
               ),
             ),
