@@ -36,7 +36,7 @@ class _CoverSliderState extends State<CoverSlider> {
   @override
   void initState() {
     _controller = widget.controller.video;
-
+    widget.controller.defaultCover = false;
     super.initState();
   }
 

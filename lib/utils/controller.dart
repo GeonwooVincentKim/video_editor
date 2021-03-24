@@ -92,7 +92,7 @@ class VideoEditorController extends ChangeNotifier with WidgetsBindingObserver {
   bool _skipFramesExtraction;
   int _fpsExtraction;
 
-  bool _defaultCover = true;
+  bool defaultCover = true;
   Duration _defaultCoverTime;
   double _coverPos = 0.0;
   List<dynamic> _frames;
@@ -322,7 +322,7 @@ class VideoEditorController extends ChangeNotifier with WidgetsBindingObserver {
   }
 
   void updateCover(double coverPos) async {
-    _defaultCover = false;
+    defaultCover = false;
     _coverPos = coverPos;
     _coverIndex.value = (frames.length * coverPos).toInt();
     _cover = new File(frames[_coverIndex.value].path);
@@ -331,7 +331,7 @@ class VideoEditorController extends ChangeNotifier with WidgetsBindingObserver {
 
   /// Return the position of the cover in Duration format on all the video (no trim)
   Duration _coverTime() {
-    if (_defaultCover) {
+    if (defaultCover) {
       if (videoDuration > _defaultCoverTime)
         return _defaultCoverTime;
       else
