@@ -97,8 +97,8 @@ class VideoEditorController extends ChangeNotifier with WidgetsBindingObserver {
   double _coverPos = 0.0;
   List<dynamic> _frames;
   List<dynamic> _selectionFrames;
-  ValueNotifier<int> _coverIndex = ValueNotifier<int>(null);
-  File _cover;
+  int _coverIndex;
+  ValueNotifier<File> _coverPreviewNotifier = ValueNotifier<File>(null);
 
   String _editionName;
   Directory _editionTempDir;
@@ -279,23 +279,24 @@ class VideoEditorController extends ChangeNotifier with WidgetsBindingObserver {
   void _initCover() async {
     if (_skipFramesExtraction) return null;
 
-    final executions = await _ffmpeg.listExecutions();
-    if (executions.length > 0) _ffmpeg.cancel();
-
     if (_framesExtractionMode == VideExportFramesExtractionMode.normal) {
+      final executions = await _ffmpeg.listExecutions();
+      if (executions.length > 0) _ffmpeg.cancel();
       _getFrames(false);
-      notifyListeners();
     } else if (_framesExtractionMode == VideExportFramesExtractionMode.opti) {
-      if (_frames == null) {
+      if (_frames == null && !_isExtractingFrames) {
         _getFrames(true);
-      } else {
+      } else if (!_isExtractingFrames) {
         _selectionFrames = _frames.sublist(
             _trimStart.inSeconds * _fpsExtraction,
             _trimEnd.inSeconds * _fpsExtraction);
-        _cover = new File(_selectionFrames.first.path);
+        _coverPos = 0.0;
+        _coverIndex = 0;
+        _coverPreviewNotifier.value = new File(_selectionFrames.first.path);
       }
-      notifyListeners();
     }
+
+    notifyListeners();
   }
 
   void _getFrames(bool fullFrames) async {
@@ -313,10 +314,10 @@ class VideoEditorController extends ChangeNotifier with WidgetsBindingObserver {
         _selectionFrames = listFrames.sublist(
             _trimStart.inSeconds * _fpsExtraction,
             _trimEnd.inSeconds * _fpsExtraction);
-        _cover = new File(_selectionFrames.first.path);
+        _coverPreviewNotifier.value = new File(_selectionFrames.first.path);
       } else
-        _cover = new File(_frames.first.path);
-      _coverIndex.value = 0;
+        _coverPreviewNotifier.value = new File(_frames.first.path);
+      _coverIndex = 0;
       _isExtractingFrames = false;
     }
   }
@@ -324,8 +325,8 @@ class VideoEditorController extends ChangeNotifier with WidgetsBindingObserver {
   void updateCover(double coverPos) async {
     defaultCover = false;
     _coverPos = coverPos;
-    _coverIndex.value = (frames.length * coverPos).toInt();
-    _cover = new File(frames[_coverIndex.value].path);
+    _coverIndex = (frames.length * coverPos).toInt();
+    _coverPreviewNotifier.value = new File(frames[_coverIndex].path);
     notifyListeners();
   }
 
@@ -348,8 +349,8 @@ class VideoEditorController extends ChangeNotifier with WidgetsBindingObserver {
 
   bool get isExtractingFrames => _isExtractingFrames;
   double get coverPosition => _coverPos;
-  File get cover => _cover;
-  ValueNotifier<int> get coverIndex => _coverIndex;
+  ValueNotifier<File> get coverPreviewNotifier => _coverPreviewNotifier;
+  int get coverIndex => _coverIndex;
   List<dynamic> get frames {
     return _framesExtractionMode == VideExportFramesExtractionMode.normal
         ? _frames
