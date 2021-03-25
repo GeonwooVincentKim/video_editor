@@ -538,9 +538,9 @@ class VideoEditorController extends ChangeNotifier with WidgetsBindingObserver {
     //----------------//
     final List<String> filters = [scaleInstruction, crop, rotation];
     filters.removeWhere((item) => item.isEmpty);
-    final String filter = filters.isNotEmpty ? "" + filters.join(",") : "";
+    final String filter = filters.isNotEmpty ? "-vf " + filters.join(",") : "";
     final String execute =
-        " -ss $timeFormat -i ${file.path} -y -vf \"$filter\" -frames:v 1 $outputPath -hide_banner -loglevel error";
+        " -ss $timeFormat -i ${file.path} -y $filter -frames:v 1 $outputPath";
 
     if (progressCallback != null)
       _config.enableStatisticsCallback(progressCallback);
@@ -606,9 +606,15 @@ class VideoEditorController extends ChangeNotifier with WidgetsBindingObserver {
     //----------------//
     //VALIDATE FILTERS//
     //----------------//
-    final List<String> filters = [crop, scaleInstruction, rotation, gif];
+    final List<String> filters = [
+      "fps=$_fpsExtraction",
+      crop,
+      scaleInstruction,
+      rotation,
+      gif
+    ];
     filters.removeWhere((item) => item.isEmpty);
-    final String filter = filters.isNotEmpty ? "" + filters.join(",") : "";
+    final String filter = filters.isNotEmpty ? "-vf " + filters.join(",") : "";
 
     final String outputPath = localProcessDir.path +
         _editionName +
@@ -617,7 +623,7 @@ class VideoEditorController extends ChangeNotifier with WidgetsBindingObserver {
         "%03d.jpg";
     // Create a thumbnail image every X seconds of the video: https://trac.ffmpeg.org/wiki/Create%20a%20thumbnail%20image%20every%20X%20seconds%20of%20the%20video
     final String execute =
-        " $ssTrim -i $videoPath $toTrim -y -vf \"fps=$_fpsExtraction,$filter\" -an $outputPath";
+        " $ssTrim -i $videoPath $toTrim -y $filter -an $outputPath";
 
     if (progressCallback != null)
       _config.enableStatisticsCallback(progressCallback);
