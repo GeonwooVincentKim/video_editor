@@ -1,5 +1,6 @@
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
+import 'package:helpers/helpers.dart';
 import 'package:video_thumbnail/video_thumbnail.dart';
 
 import 'package:video_editor/widgets/crop/crop_grid_painter.dart';
@@ -12,6 +13,7 @@ class ThumbnailSlider extends StatefulWidget {
     @required this.controller,
     this.height = 60,
     this.quality = 25,
+    this.layoutWidth,
     @required this.type,
   }) : assert(controller != null);
 
@@ -20,6 +22,7 @@ class ThumbnailSlider extends StatefulWidget {
 
   ///THUMBNAIL HEIGHT
   final double height;
+  final double layoutWidth;
 
   final VideoEditorController controller;
 
@@ -30,7 +33,7 @@ class ThumbnailSlider extends StatefulWidget {
 }
 
 class _ThumbnailSliderState extends State<ThumbnailSlider> {
-  double _aspect = 1.0, _scale = 1.0, _width = 1.0;
+  double _aspect = 1.0, _scale = 1.0;
   int _thumbnails = 8;
 
   Rect _rect;
@@ -45,6 +48,18 @@ class _ThumbnailSliderState extends State<ThumbnailSlider> {
     super.initState();
     _aspect = widget.controller.video.value.aspectRatio;
     _isTrimmed = widget.controller.isTrimmmed;
+
+    _size = _aspect <= 1.0
+        ? Size(widget.height * _aspect, widget.height)
+        : Size(widget.height, widget.height / _aspect);
+    _thumbnails = (widget.layoutWidth ~/ _size.width) + 1;
+    _stream = widget.type == ThumbnailType.trim
+        ? _generateTrimThumbnails()
+        : _generateCoverThumbnails();
+    _rect = _calculateTrimRect();
+
+    print(
+        "THU*MNAIL SLIDER = layoutWidth=${widget.layoutWidth} sizeWidth=${_size.width}");
   }
 
   @override
@@ -136,54 +151,38 @@ class _ThumbnailSliderState extends State<ThumbnailSlider> {
 
   @override
   Widget build(BuildContext context) {
-    return LayoutBuilder(builder: (_, box) {
-      final double width = box.maxWidth;
-      if (_width != width) {
-        _width = width;
-
-        _size = _aspect <= 1.0
-            ? Size(widget.height * _aspect, widget.height)
-            : Size(widget.height, widget.height / _aspect);
-        _thumbnails = (_width ~/ _size.width) + 1;
-        _stream = widget.type == ThumbnailType.trim
-            ? _generateTrimThumbnails()
-            : _generateCoverThumbnails();
-        _rect = _calculateTrimRect();
-      }
-
-      return StreamBuilder(
-        stream: _stream,
-        builder: (_, AsyncSnapshot<List<Uint8List>> snapshot) {
-          final data = snapshot.data;
-          return snapshot.hasData
-              ? ListView.builder(
-                  scrollDirection: Axis.horizontal,
-                  padding: EdgeInsets.zero,
-                  physics: NeverScrollableScrollPhysics(),
-                  itemCount: data.length,
-                  itemBuilder: (_, int index) {
-                    return ClipRRect(
-                      child: Transform.scale(
-                        scale: _scale,
-                        child: Transform.translate(
-                          offset: _translate,
-                          child: Container(
-                            alignment: Alignment.center,
-                            height: _size.height,
-                            width: _size.width,
-                            child: _croppedThumbnail(_size.width, _size.height,
-                                data[index], data[index > 0 ? index - 1 : 0]),
-                            //_notCroppedThumbnail(data[index]),
-                          ),
+    return StreamBuilder(
+      stream: _stream,
+      builder: (_, AsyncSnapshot<List<Uint8List>> snapshot) {
+        final data = snapshot.data;
+        return snapshot.hasData
+            ? ListView.builder(
+                scrollDirection: Axis.horizontal,
+                padding: Margin.horizontal(widget.height / 4),
+                //physics: NeverScrollableScrollPhysics(),
+                itemCount: data.length,
+                itemBuilder: (_, int index) {
+                  return ClipRRect(
+                    child: Transform.scale(
+                      scale: _scale,
+                      child: Transform.translate(
+                        offset: _translate,
+                        child: Container(
+                          alignment: Alignment.center,
+                          height: _size.height,
+                          width: _size.width,
+                          child: _croppedThumbnail(_size.width, _size.height,
+                              data[index], data[index > 0 ? index - 1 : 0]),
+                          //_notCroppedThumbnail(data[index]),
                         ),
                       ),
-                    );
-                  },
-                )
-              : SizedBox();
-        },
-      );
-    });
+                    ),
+                  );
+                },
+              )
+            : SizedBox();
+      },
+    );
   }
 
   Widget _notCroppedThumbnail(Uint8List data) {
