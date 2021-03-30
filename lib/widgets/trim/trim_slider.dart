@@ -46,7 +46,9 @@ class _TrimSliderState extends State<TrimSlider> {
   Size _fullLayout = Size.zero;
   VideoPlayerController _controller;
 
+  double _thumbnailPosition = 0.0;
   _TrimStyle _style;
+  final double trimBarWidth = 15;
 
   @override
   void initState() {
@@ -56,8 +58,6 @@ class _TrimSliderState extends State<TrimSlider> {
     if (widget.controller.maxDuration != null &&
         widget.controller.maxDuration < widget.controller.videoDuration)
       _style = _TrimStyle.selection;
-
-    print("TRIMMER STYLE = $_style");
 
     super.initState();
   }
@@ -141,21 +141,19 @@ class _TrimSliderState extends State<TrimSlider> {
   }
 
   void onLeftDragStart(DragStartDetails details) {
-    print("onLeftDragStart");
     _boundary.value = _TrimBoundaries.left;
     _updateControllerIsTrimming(true);
   }
 
   void onLeftDragUpdate(DragUpdateDetails details) {
-    print("onLeftDragUpdate");
     final Offset delta = details.delta;
     final pos = _rect.topLeft + delta;
-    if ((_rect.topLeft + delta).dx > widget.margin)
+    if ((_rect.topLeft + delta).dx > widget.margin &&
+        (_rect.topLeft + delta).dx + trimBarWidth < _rect.right)
       _changeTrimRect(left: pos.dx, width: _rect.width - delta.dx);
   }
 
   void onLeftDragEnd(DragEndDetails details) {
-    print("onLeftDragEnd");
     final double _progressTrim = _getTrimPosition();
     if (_progressTrim >= _rect.right || _progressTrim < _rect.left)
       _controllerSeekTo(_progressTrim);
@@ -165,20 +163,18 @@ class _TrimSliderState extends State<TrimSlider> {
   }
 
   void onRightDragStart(DragStartDetails details) {
-    print("onRightDragStart");
     _boundary.value = _TrimBoundaries.right;
     _updateControllerIsTrimming(true);
   }
 
   void onRightDragUpdate(DragUpdateDetails details) {
-    print("onRightDragUpdate");
     final Offset delta = details.delta;
-    if ((_rect.topRight + delta).dx < _trimLayout.width - widget.margin)
+    if ((_rect.topRight + delta).dx < _trimLayout.width + widget.margin &&
+        (_rect.topRight + delta).dx - trimBarWidth > _rect.left)
       _changeTrimRect(width: _rect.width + delta.dx);
   }
 
   void onRightDragEnd(DragEndDetails details) {
-    print("onRightDragEnd");
     final double _progressTrim = _getTrimPosition();
     if (_progressTrim >= _rect.right || _progressTrim < _rect.left)
       _controllerSeekTo(_progressTrim);
@@ -196,7 +192,7 @@ class _TrimSliderState extends State<TrimSlider> {
     final Duration diff = _getDurationDiff(left, width);
 
     if (left >= 0 &&
-        left + width <= _fullLayout.width &&
+        left + width - widget.margin <= _trimLayout.width &&
         diff <= widget.controller.maxDuration) {
       _rect = Rect.fromLTWH(left, _rect.top, width, _rect.height);
       _updateControllerTrim();
@@ -207,7 +203,7 @@ class _TrimSliderState extends State<TrimSlider> {
     _rect = Rect.fromPoints(
       Offset(
           widget.controller.minTrim * _fullLayout.width + widget.margin, 0.0),
-      Offset(widget.controller.maxTrim * _fullLayout.width - widget.margin,
+      Offset(widget.controller.maxTrim * _fullLayout.width + widget.margin,
           widget.height),
     );
   }
@@ -223,7 +219,9 @@ class _TrimSliderState extends State<TrimSlider> {
 
   void _updateControllerTrim() {
     final double width = _fullLayout.width;
-    widget.controller.updateTrim(_rect.left / width, _rect.right / width);
+    widget.controller.updateTrim(
+        (_rect.left + _thumbnailPosition - widget.margin) / width,
+        (_rect.right + _thumbnailPosition - widget.margin) / width);
   }
 
   void _updateControllerIsTrimming(bool value) {
@@ -242,7 +240,7 @@ class _TrimSliderState extends State<TrimSlider> {
 
   Duration _getDurationDiff(double left, double width) {
     final double min = (left - widget.margin) / _fullLayout.width;
-    final double max = (left + (width + widget.margin)) / _fullLayout.width;
+    final double max = (left + width - widget.margin) / _fullLayout.width;
     final Duration duration = _controller.value.duration;
     return (duration * max) - (duration * min);
   }
@@ -250,9 +248,11 @@ class _TrimSliderState extends State<TrimSlider> {
   @override
   Widget build(BuildContext context) {
     return SizeBuilder(builder: (width, height) {
-      final Size trimLayout = Size(width, height);
+      final Size trimLayout = Size(width - widget.margin * 2, height);
       final Size fullLayout = Size(
-          _style == _TrimStyle.entire ? width : width * getRatioDuration(),
+          _style == _TrimStyle.entire
+              ? trimLayout.width
+              : trimLayout.width * getRatioDuration(),
           height);
       _fullLayout = fullLayout;
       if (_trimLayout != trimLayout) {
@@ -265,12 +265,25 @@ class _TrimSliderState extends State<TrimSlider> {
             child: Container(
           width: _fullLayout.width,
           child: Stack(children: [
-            ThumbnailSlider(
-                controller: widget.controller,
-                height: widget.height,
-                quality: widget.quality,
-                layoutWidth: _fullLayout.width,
-                type: ThumbnailType.trim),
+            NotificationListener<ScrollNotification>(
+              child: ThumbnailSlider(
+                  controller: widget.controller,
+                  height: widget.height,
+                  quality: widget.quality,
+                  layoutWidth: _fullLayout.width,
+                  type: ThumbnailType.trim),
+              onNotification: (notification) {
+                _boundary.value = _TrimBoundaries.inside;
+                _updateControllerIsTrimming(true);
+                if (notification is ScrollEndNotification) {
+                  _thumbnailPosition = notification.metrics.pixels;
+                  _controllerSeekTo(_rect.left + _thumbnailPosition);
+                  _updateControllerIsTrimming(false);
+                  _updateControllerTrim();
+                }
+                return true;
+              },
+            ),
             Container(
                 child: Stack(
               children: [
@@ -282,42 +295,45 @@ class _TrimSliderState extends State<TrimSlider> {
                     child: Opacity(
                         opacity: 0.6,
                         child: Container(
-                          width: _rect.left - 7.5,
+                          width: _rect.left - trimBarWidth / 2,
                           color: Colors.white,
                         ))),
                 // LEFT TRIM BAR
                 Positioned(
                     bottom: 0.0,
                     top: 0.0,
-                    left: _rect.left - 7.5,
+                    left: _rect.left - trimBarWidth / 2,
                     child: Container(
                         child: GestureDetector(
                             onHorizontalDragUpdate: onLeftDragUpdate,
                             onHorizontalDragStart: onLeftDragStart,
                             onHorizontalDragEnd: onLeftDragEnd,
-                            child: Image(image: widget.trimBar, width: 15)))),
+                            child: Image(
+                                image: widget.trimBar, width: trimBarWidth)))),
                 // RIGHT BACKGROUND
                 Positioned(
                     bottom: 0.0,
                     top: 0.0,
-                    left: _rect.right - 7.5,
+                    left: _rect.right - trimBarWidth / 2,
                     child: Opacity(
                         opacity: 0.6,
                         child: Container(
-                          width: fullLayout.width - _rect.right - 7.5,
+                          width:
+                              fullLayout.width - _rect.right - trimBarWidth / 2,
                           color: Colors.white,
                         ))),
                 // RIGHT TRIM BAR
                 Positioned(
                     bottom: 0.0,
                     top: 0.0,
-                    left: _rect.right - 7.5,
+                    left: _rect.right - trimBarWidth / 2,
                     child: Container(
                         child: GestureDetector(
                             onHorizontalDragUpdate: onRightDragUpdate,
                             onHorizontalDragStart: onRightDragStart,
                             onHorizontalDragEnd: onRightDragEnd,
-                            child: Image(image: widget.trimBar, width: 15)))),
+                            child: Image(
+                                image: widget.trimBar, width: trimBarWidth)))),
               ],
             ))
 
