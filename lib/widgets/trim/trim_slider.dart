@@ -292,12 +292,13 @@ class _TrimSliderState extends State<TrimSlider> {
                     bottom: 0.0,
                     top: 0.0,
                     left: 0.0,
-                    child: Opacity(
-                        opacity: 0.6,
-                        child: Container(
-                          width: _rect.left - trimBarWidth / 2,
-                          color: Colors.white,
-                        ))),
+                    child: IgnorePointer(
+                        child: Opacity(
+                            opacity: 0.6,
+                            child: Container(
+                              width: _rect.left - trimBarWidth / 2,
+                              color: Colors.white,
+                            )))),
                 // LEFT TRIM BAR
                 Positioned(
                     bottom: 0.0,
@@ -315,13 +316,15 @@ class _TrimSliderState extends State<TrimSlider> {
                     bottom: 0.0,
                     top: 0.0,
                     left: _rect.right - trimBarWidth / 2,
-                    child: Opacity(
-                        opacity: 0.6,
-                        child: Container(
-                          width:
-                              fullLayout.width - _rect.right - trimBarWidth / 2,
-                          color: Colors.white,
-                        ))),
+                    child: IgnorePointer(
+                        child: Opacity(
+                            opacity: 0.6,
+                            child: Container(
+                              width: fullLayout.width -
+                                  _rect.right -
+                                  trimBarWidth / 2,
+                              color: Colors.white,
+                            )))),
                 // RIGHT TRIM BAR
                 Positioned(
                     bottom: 0.0,
