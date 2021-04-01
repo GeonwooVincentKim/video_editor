@@ -158,8 +158,7 @@ class _ThumbnailSliderState extends State<ThumbnailSlider> {
         return snapshot.hasData
             ? ListView.builder(
                 scrollDirection: Axis.horizontal,
-                padding: Margin.horizontal(widget.height / 4),
-                //physics: NeverScrollableScrollPhysics(),
+                physics: NeverScrollableScrollPhysics(),
                 itemCount: data.length,
                 itemBuilder: (_, int index) {
                   return ClipRRect(

@@ -8,7 +8,7 @@ import 'package:video_player/video_player.dart';
 
 enum _TrimBoundaries { left, right, inside, progress }
 
-enum _TrimStyle { selection, entire }
+enum _TrimStyle { maxDuration, classic }
 
 class TrimSlider extends StatefulWidget {
   ///Slider that trim video length.
@@ -54,10 +54,10 @@ class _TrimSliderState extends State<TrimSlider> {
   void initState() {
     _controller = widget.controller.video;
 
-    _style = _TrimStyle.entire;
+    _style = _TrimStyle.classic;
     if (widget.controller.maxDuration != null &&
         widget.controller.maxDuration < widget.controller.videoDuration)
-      _style = _TrimStyle.selection;
+      _style = _TrimStyle.maxDuration;
 
     super.initState();
   }
@@ -250,7 +250,7 @@ class _TrimSliderState extends State<TrimSlider> {
     return SizeBuilder(builder: (width, height) {
       final Size trimLayout = Size(width - widget.margin * 2, height);
       final Size fullLayout = Size(
-          _style == _TrimStyle.entire
+          _style == _TrimStyle.classic
               ? trimLayout.width
               : trimLayout.width * getRatioDuration(),
           height);
@@ -266,12 +266,41 @@ class _TrimSliderState extends State<TrimSlider> {
           width: _fullLayout.width,
           child: Stack(children: [
             NotificationListener<ScrollNotification>(
-              child: ThumbnailSlider(
-                  controller: widget.controller,
-                  height: widget.height,
-                  quality: widget.quality,
-                  layoutWidth: _fullLayout.width,
-                  type: ThumbnailType.trim),
+              child: SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  child: Container(
+                      margin: Margin.horizontal(widget.margin),
+                      child: Column(children: [
+                        SizedBox(
+                            height: widget.height,
+                            width: _fullLayout.width,
+                            child: ThumbnailSlider(
+                                controller: widget.controller,
+                                height: widget.height,
+                                quality: widget.quality,
+                                layoutWidth: _fullLayout.width,
+                                type: ThumbnailType.trim)),
+                        SizedBox(
+                            width: _fullLayout.width,
+                            child: Container(
+                                child: Row(
+                                    mainAxisAlignment:
+                                        MainAxisAlignment.spaceBetween,
+                                    children: [
+                                  for (int i = 0;
+                                      i <
+                                          (widget.controller.videoDuration
+                                                      .inSeconds /
+                                                  5)
+                                              .ceil();
+                                      i++)
+                                    Text(
+                                      (i * 5).toString(),
+                                      style:
+                                          Theme.of(context).textTheme.bodyText2,
+                                    ),
+                                ]))),
+                      ]))),
               onNotification: (notification) {
                 _boundary.value = _TrimBoundaries.inside;
                 _updateControllerIsTrimming(true);
@@ -285,61 +314,59 @@ class _TrimSliderState extends State<TrimSlider> {
               },
             ),
             Container(
-                child: Stack(
-              children: [
-                // LEFT BACKGROUND
-                Positioned(
-                    bottom: 0.0,
-                    top: 0.0,
-                    left: 0.0,
-                    child: IgnorePointer(
-                        child: Opacity(
-                            opacity: 0.6,
-                            child: Container(
-                              width: _rect.left - trimBarWidth / 2,
-                              color: Colors.white,
-                            )))),
-                // LEFT TRIM BAR
-                Positioned(
-                    bottom: 0.0,
-                    top: 0.0,
-                    left: _rect.left - trimBarWidth / 2,
-                    child: Container(
-                        child: GestureDetector(
-                            onHorizontalDragUpdate: onLeftDragUpdate,
-                            onHorizontalDragStart: onLeftDragStart,
-                            onHorizontalDragEnd: onLeftDragEnd,
-                            child: Image(
-                                image: widget.trimBar, width: trimBarWidth)))),
-                // RIGHT BACKGROUND
-                Positioned(
-                    bottom: 0.0,
-                    top: 0.0,
-                    left: _rect.right - trimBarWidth / 2,
-                    child: IgnorePointer(
-                        child: Opacity(
-                            opacity: 0.6,
-                            child: Container(
-                              width: fullLayout.width -
-                                  _rect.right -
-                                  trimBarWidth / 2,
-                              color: Colors.white,
-                            )))),
-                // RIGHT TRIM BAR
-                Positioned(
-                    bottom: 0.0,
-                    top: 0.0,
-                    left: _rect.right - trimBarWidth / 2,
-                    child: Container(
-                        child: GestureDetector(
-                            onHorizontalDragUpdate: onRightDragUpdate,
-                            onHorizontalDragStart: onRightDragStart,
-                            onHorizontalDragEnd: onRightDragEnd,
-                            child: Image(
-                                image: widget.trimBar, width: trimBarWidth)))),
-              ],
-            ))
-
+                height: widget.height,
+                child: Stack(children: [
+                  // LEFT BACKGROUND
+                  Positioned(
+                      bottom: 0.0,
+                      top: 0.0,
+                      left: 0.0,
+                      child: IgnorePointer(
+                          child: Opacity(
+                              opacity: 0.6,
+                              child: Container(
+                                width: _rect.left - trimBarWidth / 2,
+                                color: Colors.white,
+                              )))),
+                  // LEFT TRIM BAR
+                  Positioned(
+                      bottom: 0.0,
+                      top: 0.0,
+                      left: _rect.left - trimBarWidth / 2,
+                      child: Container(
+                          child: GestureDetector(
+                              onHorizontalDragUpdate: onLeftDragUpdate,
+                              onHorizontalDragStart: onLeftDragStart,
+                              onHorizontalDragEnd: onLeftDragEnd,
+                              child: Image(
+                                  image: widget.trimBar,
+                                  width: trimBarWidth)))),
+                  // RIGHT BACKGROUND
+                  Positioned(
+                      bottom: 0.0,
+                      top: 0.0,
+                      left: _rect.right - trimBarWidth / 2,
+                      child: IgnorePointer(
+                          child: Opacity(
+                              opacity: 0.6,
+                              child: Container(
+                                width: fullLayout.width - _rect.right,
+                                color: Colors.white,
+                              )))),
+                  // RIGHT TRIM BAR
+                  Positioned(
+                      bottom: 0.0,
+                      top: 0.0,
+                      left: _rect.right - trimBarWidth / 2,
+                      child: Container(
+                          child: GestureDetector(
+                              onHorizontalDragUpdate: onRightDragUpdate,
+                              onHorizontalDragStart: onRightDragStart,
+                              onHorizontalDragEnd: onRightDragEnd,
+                              child: Image(
+                                  image: widget.trimBar,
+                                  width: trimBarWidth)))),
+                ]))
             /*
             Container(
               padding: Margin.horizontal(widget.height / 4),
