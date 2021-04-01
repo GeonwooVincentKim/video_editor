@@ -57,9 +57,6 @@ class _ThumbnailSliderState extends State<ThumbnailSlider> {
         ? _generateTrimThumbnails()
         : _generateCoverThumbnails();
     _rect = _calculateTrimRect();
-
-    print(
-        "THU*MNAIL SLIDER = layoutWidth=${widget.layoutWidth} sizeWidth=${_size.width}");
   }
 
   @override

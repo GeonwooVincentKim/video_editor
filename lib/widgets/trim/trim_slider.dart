@@ -39,7 +39,6 @@ class TrimSlider extends StatefulWidget {
 
 class _TrimSliderState extends State<TrimSlider> {
   final _boundary = ValueNotifier<_TrimBoundaries>(null);
-
   Rect _rect;
 
   Size _trimLayout = Size.zero;
@@ -48,7 +47,6 @@ class _TrimSliderState extends State<TrimSlider> {
 
   double _thumbnailPosition = 0.0;
   _TrimStyle _style;
-  final double trimBarWidth = 15;
 
   @override
   void initState() {
@@ -66,10 +64,7 @@ class _TrimSliderState extends State<TrimSlider> {
   //GESTURES//
   //--------//
   void _onHorizontalDragStart(DragStartDetails details) {
-    print("ON HORIZONTAL DRAG START");
-
-    final double margin = 25.0;
-    final double sideWidth = 4.0;
+    final double margin = 25.0 + widget.margin;
     final double pos = details.localPosition.dx;
     final double max = _rect.right;
     final double min = _rect.left;
@@ -80,10 +75,9 @@ class _TrimSliderState extends State<TrimSlider> {
     //IS TOUCHING THE GRID
     if (pos >= minMargin[0] && pos <= maxMargin[1]) {
       //TOUCH BOUNDARIES
-      if (pos + sideWidth >= minMargin[0] && pos - sideWidth <= minMargin[1])
+      if (pos >= minMargin[0] && pos <= minMargin[1])
         _boundary.value = _TrimBoundaries.left;
-      else if (pos + sideWidth >= maxMargin[0] &&
-          pos - sideWidth <= maxMargin[1])
+      else if (pos >= maxMargin[0] && pos <= maxMargin[1])
         _boundary.value = _TrimBoundaries.right;
       else if (pos >= progressTrim - margin && pos <= progressTrim + margin)
         _boundary.value = _TrimBoundaries.progress;
@@ -106,14 +100,18 @@ class _TrimSliderState extends State<TrimSlider> {
       switch (_boundary.value) {
         case _TrimBoundaries.left:
           final pos = _rect.topLeft + delta;
-          _changeTrimRect(left: pos.dx, width: _rect.width - delta.dx);
+          if (pos.dx > widget.margin && pos.dx < _rect.right)
+            _changeTrimRect(left: pos.dx, width: _rect.width - delta.dx);
           break;
         case _TrimBoundaries.right:
-          _changeTrimRect(width: _rect.width + delta.dx);
+          final pos = _rect.topRight + delta;
+          if (pos.dx < _trimLayout.width + widget.margin && pos.dx > _rect.left)
+            _changeTrimRect(width: _rect.width + delta.dx);
           break;
         case _TrimBoundaries.inside:
           final pos = _rect.topLeft + delta;
-          _changeTrimRect(left: pos.dx);
+          if (pos.dx > widget.margin && pos.dx < _rect.right)
+            _changeTrimRect(left: pos.dx);
           break;
         case _TrimBoundaries.progress:
           final double pos = details.localPosition.dx;
@@ -138,48 +136,6 @@ class _TrimSliderState extends State<TrimSlider> {
         _updateControllerTrim();
       }
     }
-  }
-
-  void onLeftDragStart(DragStartDetails details) {
-    _boundary.value = _TrimBoundaries.left;
-    _updateControllerIsTrimming(true);
-  }
-
-  void onLeftDragUpdate(DragUpdateDetails details) {
-    final Offset delta = details.delta;
-    final pos = _rect.topLeft + delta;
-    if ((_rect.topLeft + delta).dx > widget.margin &&
-        (_rect.topLeft + delta).dx + trimBarWidth < _rect.right)
-      _changeTrimRect(left: pos.dx, width: _rect.width - delta.dx);
-  }
-
-  void onLeftDragEnd(DragEndDetails details) {
-    final double _progressTrim = _getTrimPosition();
-    if (_progressTrim >= _rect.right || _progressTrim < _rect.left)
-      _controllerSeekTo(_progressTrim);
-    _updateControllerIsTrimming(false);
-    _controllerSeekTo(_rect.left);
-    _updateControllerTrim();
-  }
-
-  void onRightDragStart(DragStartDetails details) {
-    _boundary.value = _TrimBoundaries.right;
-    _updateControllerIsTrimming(true);
-  }
-
-  void onRightDragUpdate(DragUpdateDetails details) {
-    final Offset delta = details.delta;
-    if ((_rect.topRight + delta).dx < _trimLayout.width + widget.margin &&
-        (_rect.topRight + delta).dx - trimBarWidth > _rect.left)
-      _changeTrimRect(width: _rect.width + delta.dx);
-  }
-
-  void onRightDragEnd(DragEndDetails details) {
-    final double _progressTrim = _getTrimPosition();
-    if (_progressTrim >= _rect.right || _progressTrim < _rect.left)
-      _controllerSeekTo(_progressTrim);
-    _updateControllerIsTrimming(false);
-    _updateControllerTrim();
   }
 
   //----//
@@ -230,7 +186,9 @@ class _TrimSliderState extends State<TrimSlider> {
   }
 
   double _getTrimPosition() {
-    return _fullLayout.width * widget.controller.trimPosition;
+    return _fullLayout.width * widget.controller.trimPosition -
+        _thumbnailPosition +
+        widget.margin;
   }
 
   double getRatioDuration() {
@@ -306,141 +264,41 @@ class _TrimSliderState extends State<TrimSlider> {
                 _updateControllerIsTrimming(true);
                 if (notification is ScrollEndNotification) {
                   _thumbnailPosition = notification.metrics.pixels;
-                  _controllerSeekTo(_rect.left + _thumbnailPosition);
+                  _controllerSeekTo(_rect.left);
                   _updateControllerIsTrimming(false);
                   _updateControllerTrim();
                 }
                 return true;
               },
             ),
-            Container(
-                height: widget.height,
-                child: Stack(children: [
-                  // LEFT BACKGROUND
-                  Positioned(
-                      bottom: 0.0,
-                      top: 0.0,
-                      left: 0.0,
-                      child: IgnorePointer(
-                          child: Opacity(
-                              opacity: 0.6,
-                              child: Container(
-                                width: _rect.left - trimBarWidth / 2,
-                                color: Colors.white,
-                              )))),
-                  // LEFT TRIM BAR
-                  Positioned(
-                      bottom: 0.0,
-                      top: 0.0,
-                      left: _rect.left - trimBarWidth / 2,
-                      child: Container(
-                          child: GestureDetector(
-                              onHorizontalDragUpdate: onLeftDragUpdate,
-                              onHorizontalDragStart: onLeftDragStart,
-                              onHorizontalDragEnd: onLeftDragEnd,
-                              child: Image(
-                                  image: widget.trimBar,
-                                  width: trimBarWidth)))),
-                  // RIGHT BACKGROUND
-                  Positioned(
-                      bottom: 0.0,
-                      top: 0.0,
-                      left: _rect.right - trimBarWidth / 2,
-                      child: IgnorePointer(
-                          child: Opacity(
-                              opacity: 0.6,
-                              child: Container(
-                                width: fullLayout.width - _rect.right,
-                                color: Colors.white,
-                              )))),
-                  // RIGHT TRIM BAR
-                  Positioned(
-                      bottom: 0.0,
-                      top: 0.0,
-                      left: _rect.right - trimBarWidth / 2,
-                      child: Container(
-                          child: GestureDetector(
-                              onHorizontalDragUpdate: onRightDragUpdate,
-                              onHorizontalDragStart: onRightDragStart,
-                              onHorizontalDragEnd: onRightDragEnd,
-                              child: Image(
-                                  image: widget.trimBar,
-                                  width: trimBarWidth)))),
-                ]))
-            /*
-            Container(
-              padding: Margin.horizontal(widget.height / 4),
-              child: GestureDetector(
-                  onHorizontalDragUpdate: _onHorizontalDragUpdate,
-                  onHorizontalDragStart: _onHorizontalDragStart,
-                  onHorizontalDragEnd: _onHorizontalDragEnd,
-                  behavior: HitTestBehavior.translucent,
-                  child: AnimatedBuilder(
-                    animation: _controller,
-                    builder: (_, __) {
-                      return CustomPaint(
-                        //size: Size.fromWidth(layout.width - _rect.left),
-                        painter: TrimSliderPainter(
-                          _rect,
-                          _getTrimPosition(),
-                          // Compute cropped height to not display cropped painted area in thumbnails slider
-                          cropHeight:
-                              widget.controller.video.value.aspectRatio <= 1.0
-                                  ? widget.height *
-                                      widget.controller.video.value.aspectRatio
-                                  : widget.height /
-                                      widget.controller.video.value.aspectRatio,
-                          style: widget.controller.trimStyle,
-                        ),
-                      );
-                    },
-                  )),
-            )*/
+            GestureDetector(
+                onHorizontalDragUpdate: _onHorizontalDragUpdate,
+                onHorizontalDragStart: _onHorizontalDragStart,
+                onHorizontalDragEnd: _onHorizontalDragEnd,
+                behavior: HitTestBehavior.opaque,
+                child: AnimatedBuilder(
+                  animation: _controller,
+                  builder: (_, __) {
+                    return CustomPaint(
+                      size: Size.fromHeight(widget.height),
+                      painter: TrimSliderPainter(
+                        _rect,
+                        _getTrimPosition(),
+                        // Compute cropped height to not display cropped painted area in thumbnails slider
+                        cropHeight:
+                            widget.controller.video.value.aspectRatio <= 1.0
+                                ? widget.height *
+                                    widget.controller.video.value.aspectRatio
+                                : widget.height /
+                                    widget.controller.video.value.aspectRatio,
+                        style: widget.controller.trimStyle,
+                      ),
+                    );
+                  },
+                )),
           ]),
         ))
       ]);
     });
-  }
-}
-
-class LeftTrimmer extends CustomPainter {
-  LeftTrimmer(this.rect, this.position, {this.style, this.cropHeight});
-
-  final Rect rect;
-  final double position;
-  final TrimSliderStyle style;
-  final double cropHeight;
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final Paint background = Paint()..color = style.background;
-    final side = Paint()
-      ..color = style.sideTrimmerColor
-      ..strokeWidth = style.sideTrimmerWidth;
-    final sideInner = Paint()
-      ..color = style.innerSideTrimmerColor
-      ..strokeWidth = style.innerSideTrimmerWidth
-      ..strokeCap = StrokeCap.round;
-    final topCropPosition = (size.height - cropHeight) / 2;
-    final bottomCropPosition = (size.height - cropHeight) / 2 + cropHeight;
-
-    canvas.drawLine(
-      Offset(rect.left + side.strokeWidth / 2, topCropPosition),
-      Offset(rect.left + side.strokeWidth / 2, bottomCropPosition),
-      side,
-    );
-    canvas.drawLine(
-        Offset(rect.left + side.strokeWidth / 2,
-            (size.height + topCropPosition) * 0.33),
-        Offset(rect.left + side.strokeWidth / 2,
-            (size.height - topCropPosition) * 0.66),
-        sideInner);
-    canvas.drawRect(
-        Rect.fromLTWH(0, topCropPosition, rect.left, cropHeight), background);
-  }
-
-  @override
-  bool shouldRepaint(LeftTrimmer oldDelegate) {
-    return true;
   }
 }
