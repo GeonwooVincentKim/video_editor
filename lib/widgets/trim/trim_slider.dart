@@ -39,6 +39,7 @@ class TrimSlider extends StatefulWidget {
 
 class _TrimSliderState extends State<TrimSlider> {
   final _boundary = ValueNotifier<_TrimBoundaries>(null);
+  final _scrollController = ScrollController();
   Rect _rect;
 
   Size _trimLayout = Size.zero;
@@ -110,6 +111,13 @@ class _TrimSliderState extends State<TrimSlider> {
           break;
         case _TrimBoundaries.inside:
           final pos = _rect.topLeft + delta;
+          // Move thumbs slider when the trimmer is on the edges
+          if (_rect.topLeft.dx + delta.dx < widget.margin ||
+              _rect.topRight.dx + delta.dx > _trimLayout.width) {
+            _scrollController.position.moveTo(
+              _scrollController.offset + delta.dx,
+            );
+          }
           if (pos.dx > widget.margin && pos.dx < _rect.right)
             _changeTrimRect(left: pos.dx);
           break;
@@ -225,6 +233,7 @@ class _TrimSliderState extends State<TrimSlider> {
           child: Stack(children: [
             NotificationListener<ScrollNotification>(
               child: SingleChildScrollView(
+                  controller: _scrollController,
                   scrollDirection: Axis.horizontal,
                   child: Container(
                       margin: Margin.horizontal(widget.margin),
