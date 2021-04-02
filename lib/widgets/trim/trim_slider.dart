@@ -1,14 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:helpers/helpers.dart';
 import 'package:video_editor/utils/controller.dart';
-import 'package:video_editor/utils/styles.dart';
 import 'package:video_editor/widgets/trim/trim_slider_painter.dart';
 import 'package:video_editor/widgets/thumbnail/thumbnail_slider.dart';
 import 'package:video_player/video_player.dart';
 
 enum _TrimBoundaries { left, right, inside, progress }
-
-enum _TrimStyle { maxDuration, classic }
 
 class TrimSlider extends StatefulWidget {
   ///Slider that trim video length.
@@ -17,7 +14,6 @@ class TrimSlider extends StatefulWidget {
     @required this.controller,
     this.height = 60,
     this.quality = 25,
-    this.trimBar,
     this.margin,
   }) : super(key: key);
 
@@ -30,7 +26,6 @@ class TrimSlider extends StatefulWidget {
   ///Essential argument for the functioning of the Widget
   final VideoEditorController controller;
 
-  final AssetImage trimBar;
   final double margin;
 
   @override
@@ -47,16 +42,10 @@ class _TrimSliderState extends State<TrimSlider> {
   VideoPlayerController _controller;
 
   double _thumbnailPosition = 0.0;
-  _TrimStyle _style;
 
   @override
   void initState() {
     _controller = widget.controller.video;
-
-    _style = _TrimStyle.classic;
-    if (widget.controller.maxDuration != null &&
-        widget.controller.maxDuration < widget.controller.videoDuration)
-      _style = _TrimStyle.maxDuration;
 
     super.initState();
   }
@@ -213,13 +202,11 @@ class _TrimSliderState extends State<TrimSlider> {
 
   @override
   Widget build(BuildContext context) {
+    final ratio = getRatioDuration();
     return SizeBuilder(builder: (width, height) {
       final Size trimLayout = Size(width - widget.margin * 2, height);
-      final Size fullLayout = Size(
-          _style == _TrimStyle.classic
-              ? trimLayout.width
-              : trimLayout.width * getRatioDuration(),
-          height);
+      final Size fullLayout =
+          Size(trimLayout.width * (ratio > 1 ? ratio : 1), height);
       _fullLayout = fullLayout;
       if (_trimLayout != trimLayout) {
         _trimLayout = trimLayout;
@@ -245,7 +232,6 @@ class _TrimSliderState extends State<TrimSlider> {
                                 controller: widget.controller,
                                 height: widget.height,
                                 quality: widget.quality,
-                                layoutWidth: _fullLayout.width,
                                 type: ThumbnailType.trim)),
                         SizedBox(
                             width: _fullLayout.width,
