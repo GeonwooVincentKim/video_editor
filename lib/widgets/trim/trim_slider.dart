@@ -253,16 +253,19 @@ class _TrimSliderState extends State<TrimSlider>
                                         MainAxisAlignment.spaceBetween,
                                     children: [
                                   for (int i = 0;
-                                      i <
+                                      i <=
                                           (widget.controller.videoDuration
                                                       .inSeconds /
                                                   _timeGap)
                                               .ceil();
                                       i++)
                                     Text(
-                                      (i * _timeGap).toString(),
-                                      style:
-                                          Theme.of(context).textTheme.bodyText2,
+                                      (i * _timeGap <=
+                                                  widget.controller
+                                                      .videoDuration.inSeconds
+                                              ? i * _timeGap
+                                              : '')
+                                          .toString(),
                                     ),
                                 ]))),
                       ]))),
