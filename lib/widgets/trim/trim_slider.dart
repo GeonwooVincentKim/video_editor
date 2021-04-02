@@ -43,10 +43,20 @@ class _TrimSliderState extends State<TrimSlider>
   VideoPlayerController _controller;
 
   double _thumbnailPosition = 0.0;
+  double _ratio;
+  int _timeGap;
 
   @override
   void initState() {
     _controller = widget.controller.video;
+
+    _ratio = getRatioDuration();
+    final duration =
+        widget.controller.maxDuration < widget.controller.videoDuration
+            ? widget.controller.maxDuration
+            : widget.controller.videoDuration;
+    _timeGap = (duration.inSeconds / 6).ceil();
+
     super.initState();
   }
 
@@ -205,11 +215,10 @@ class _TrimSliderState extends State<TrimSlider>
 
   @override
   Widget build(BuildContext context) {
-    final ratio = getRatioDuration();
     return SizeBuilder(builder: (width, height) {
       final Size trimLayout = Size(width - widget.margin * 2, height);
       final Size fullLayout =
-          Size(trimLayout.width * (ratio > 1 ? ratio : 1), height);
+          Size(trimLayout.width * (_ratio > 1 ? _ratio : 1), height);
       _fullLayout = fullLayout;
       if (_trimLayout != trimLayout) {
         _trimLayout = trimLayout;
@@ -247,11 +256,11 @@ class _TrimSliderState extends State<TrimSlider>
                                       i <
                                           (widget.controller.videoDuration
                                                       .inSeconds /
-                                                  5)
+                                                  _timeGap)
                                               .ceil();
                                       i++)
                                     Text(
-                                      (i * 5).toString(),
+                                      (i * _timeGap).toString(),
                                       style:
                                           Theme.of(context).textTheme.bodyText2,
                                     ),
