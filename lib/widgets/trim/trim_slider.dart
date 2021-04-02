@@ -45,6 +45,8 @@ class _TrimSliderState extends State<TrimSlider>
   double _thumbnailPosition = 0.0;
   double _ratio;
   int _timeGap;
+  double _cropHeight;
+  double _trimWidth;
 
   @override
   void initState() {
@@ -56,6 +58,12 @@ class _TrimSliderState extends State<TrimSlider>
             ? widget.controller.maxDuration
             : widget.controller.videoDuration;
     _timeGap = (duration.inSeconds / 6).ceil();
+
+    _cropHeight = widget.controller.video.value.aspectRatio <= 1.0
+        ? widget.height * widget.controller.video.value.aspectRatio
+        : widget.height / widget.controller.video.value.aspectRatio;
+
+    _trimWidth = widget.controller.trimStyle.sideTrimmerWidth;
 
     super.initState();
   }
@@ -103,12 +111,13 @@ class _TrimSliderState extends State<TrimSlider>
       switch (_boundary.value) {
         case _TrimBoundaries.left:
           final pos = _rect.topLeft + delta;
-          if (pos.dx > widget.margin && pos.dx < _rect.right)
+          if (pos.dx > widget.margin && pos.dx < _rect.right - _trimWidth * 2)
             _changeTrimRect(left: pos.dx, width: _rect.width - delta.dx);
           break;
         case _TrimBoundaries.right:
           final pos = _rect.topRight + delta;
-          if (pos.dx < _trimLayout.width + widget.margin && pos.dx > _rect.left)
+          if (pos.dx < _trimLayout.width + widget.margin &&
+              pos.dx > _rect.left + _trimWidth * 2)
             _changeTrimRect(width: _rect.width + delta.dx);
           break;
         case _TrimBoundaries.inside:
@@ -225,9 +234,7 @@ class _TrimSliderState extends State<TrimSlider>
         _createTrimRect();
       }
 
-      return Row(children: [
-        Expanded(
-            child: Container(
+      return Container(
           width: _fullLayout.width,
           child: Stack(children: [
             NotificationListener<ScrollNotification>(
@@ -235,40 +242,41 @@ class _TrimSliderState extends State<TrimSlider>
                   controller: _scrollController,
                   scrollDirection: Axis.horizontal,
                   child: Container(
-                      margin: Margin.horizontal(widget.margin),
-                      child: Column(children: [
-                        SizedBox(
-                            height: widget.height,
-                            width: _fullLayout.width,
-                            child: ThumbnailSlider(
-                                controller: widget.controller,
-                                height: widget.height,
-                                quality: widget.quality,
-                                type: ThumbnailType.trim)),
-                        SizedBox(
-                            width: _fullLayout.width,
-                            child: Container(
-                                child: Row(
-                                    mainAxisAlignment:
-                                        MainAxisAlignment.spaceBetween,
-                                    children: [
-                                  for (int i = 0;
-                                      i <=
-                                          (widget.controller.videoDuration
-                                                      .inSeconds /
-                                                  _timeGap)
-                                              .ceil();
-                                      i++)
-                                    Text(
-                                      (i * _timeGap <=
-                                                  widget.controller
-                                                      .videoDuration.inSeconds
-                                              ? i * _timeGap
-                                              : '')
-                                          .toString(),
-                                    ),
-                                ]))),
-                      ]))),
+                    margin: Margin.horizontal(widget.margin),
+                    child: Column(children: [
+                      SizedBox(
+                          height: widget.height,
+                          width: _fullLayout.width,
+                          child: ThumbnailSlider(
+                              controller: widget.controller,
+                              height: widget.height,
+                              quality: widget.quality,
+                              type: ThumbnailType.trim)),
+                      Expanded(
+                          child: Container(
+                              width: _fullLayout.width,
+                              child: Row(
+                                  mainAxisAlignment:
+                                      MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    for (int i = 0;
+                                        i <=
+                                            (widget.controller.videoDuration
+                                                        .inSeconds /
+                                                    _timeGap)
+                                                .ceil();
+                                        i++)
+                                      Text(
+                                        (i * _timeGap <=
+                                                    widget.controller
+                                                        .videoDuration.inSeconds
+                                                ? i * _timeGap
+                                                : '')
+                                            .toString(),
+                                      ),
+                                  ])))
+                    ]),
+                  )),
               onNotification: (notification) {
                 _boundary.value = _TrimBoundaries.inside;
                 _updateControllerIsTrimming(true);
@@ -295,20 +303,13 @@ class _TrimSliderState extends State<TrimSlider>
                         _rect,
                         _getTrimPosition(),
                         // Compute cropped height to not display cropped painted area in thumbnails slider
-                        cropHeight:
-                            widget.controller.video.value.aspectRatio <= 1.0
-                                ? widget.height *
-                                    widget.controller.video.value.aspectRatio
-                                : widget.height /
-                                    widget.controller.video.value.aspectRatio,
+                        cropHeight: _cropHeight,
                         style: widget.controller.trimStyle,
                       ),
                     );
                   },
                 )),
-          ]),
-        ))
-      ]);
+          ]));
     });
   }
 }
