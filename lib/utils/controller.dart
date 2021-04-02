@@ -330,11 +330,13 @@ class VideoEditorController extends ChangeNotifier with WidgetsBindingObserver {
     notifyListeners();
   }
 
-  /// Return the position of the cover in Duration format on all the video (no trim)
+  /// Return the position of the cover in Duration format on all the video (no cover selection)
   Duration _coverTime() {
     if (defaultCover) {
-      if (videoDuration > _defaultCoverTime)
-        return _defaultCoverTime;
+      final trimmedCoverTime =
+          _trimStart > Duration.zero ? _trimStart : _defaultCoverTime;
+      if (videoDuration > trimmedCoverTime)
+        return trimmedCoverTime;
       else
         return videoDuration;
     }

@@ -32,7 +32,8 @@ class TrimSlider extends StatefulWidget {
   _TrimSliderState createState() => _TrimSliderState();
 }
 
-class _TrimSliderState extends State<TrimSlider> {
+class _TrimSliderState extends State<TrimSlider>
+    with AutomaticKeepAliveClientMixin<TrimSlider> {
   final _boundary = ValueNotifier<_TrimBoundaries>(null);
   final _scrollController = ScrollController();
   Rect _rect;
@@ -46,9 +47,11 @@ class _TrimSliderState extends State<TrimSlider> {
   @override
   void initState() {
     _controller = widget.controller.video;
-
     super.initState();
   }
+
+  @override
+  bool get wantKeepAlive => true;
 
   //--------//
   //GESTURES//
