@@ -252,29 +252,28 @@ class _TrimSliderState extends State<TrimSlider>
                               height: widget.height,
                               quality: widget.quality,
                               type: ThumbnailType.trim)),
-                      Expanded(
-                          child: Container(
-                              width: _fullLayout.width,
-                              child: Row(
-                                  mainAxisAlignment:
-                                      MainAxisAlignment.spaceBetween,
-                                  children: [
-                                    for (int i = 0;
-                                        i <=
-                                            (widget.controller.videoDuration
-                                                        .inSeconds /
-                                                    _timeGap)
-                                                .ceil();
-                                        i++)
-                                      Text(
-                                        (i * _timeGap <=
-                                                    widget.controller
-                                                        .videoDuration.inSeconds
-                                                ? i * _timeGap
-                                                : '')
-                                            .toString(),
-                                      ),
-                                  ])))
+                      Container(
+                          width: _fullLayout.width,
+                          child: Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                for (int i = 0;
+                                    i <=
+                                        (widget.controller.videoDuration
+                                                    .inSeconds /
+                                                _timeGap)
+                                            .ceil();
+                                    i++)
+                                  Text(
+                                    (i * _timeGap <=
+                                                widget.controller.videoDuration
+                                                    .inSeconds
+                                            ? i * _timeGap
+                                            : '')
+                                        .toString(),
+                                  ),
+                              ]))
                     ]),
                   )),
               onNotification: (notification) {
