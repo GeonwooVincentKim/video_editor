@@ -45,7 +45,6 @@ class _TrimSliderState extends State<TrimSlider>
   double _thumbnailPosition = 0.0;
   double _ratio;
   int _timeGap;
-  double _cropHeight;
   double _trimWidth;
 
   @override
@@ -58,11 +57,6 @@ class _TrimSliderState extends State<TrimSlider>
             ? widget.controller.maxDuration
             : widget.controller.videoDuration;
     _timeGap = (duration.inSeconds / 6).ceil();
-
-    _cropHeight = widget.controller.video.value.aspectRatio <= 1.0
-        ? widget.height * widget.controller.video.value.aspectRatio
-        : widget.height / widget.controller.video.value.aspectRatio;
-
     _trimWidth = widget.controller.trimStyle.sideTrimmerWidth;
 
     super.initState();
@@ -302,7 +296,12 @@ class _TrimSliderState extends State<TrimSlider>
                         _rect,
                         _getTrimPosition(),
                         // Compute cropped height to not display cropped painted area in thumbnails slider
-                        cropHeight: _cropHeight,
+                        cropHeight:
+                            widget.controller.video.value.aspectRatio <= 1.0
+                                ? widget.height *
+                                    widget.controller.video.value.aspectRatio
+                                : widget.height /
+                                    widget.controller.video.value.aspectRatio,
                         style: widget.controller.trimStyle,
                       ),
                     );

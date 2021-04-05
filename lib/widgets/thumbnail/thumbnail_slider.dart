@@ -50,7 +50,7 @@ class _ThumbnailSliderState extends State<ThumbnailSlider> {
   @override
   void didUpdateWidget(ThumbnailSlider oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (!widget.controller.isPlaying)
+    /*if (!widget.controller.isPlaying)
       setState(() {
         _rect = _calculateTrimRect();
         final double _scaleX = _size.width / _rect.width;
@@ -68,7 +68,7 @@ class _ThumbnailSliderState extends State<ThumbnailSlider> {
               (_size.height - _rect.height) / 2,
             ) -
             _rect.topLeft;
-      });
+      });*/
   }
 
   Stream<List<Uint8List>> _generateTrimThumbnails() async* {
