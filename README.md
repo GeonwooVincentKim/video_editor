@@ -3,6 +3,8 @@
 - Change the trim slider style if maxDuration is set
 - Add a CoverSlider functionnality to choose/preview/export a cover from the video
 
+![](./assets/readme/fork_features.gif)
+
 # video_editor
 
 <br>
