@@ -7,12 +7,14 @@ import 'package:video_editor/ui/crop/crop_grid_painter.dart';
 import 'package:video_editor/ui/transform.dart';
 import 'package:video_thumbnail/video_thumbnail.dart';
 
+enum ThumbnailType { trim, cover }
+
 class ThumbnailSlider extends StatefulWidget {
-  ThumbnailSlider({
-    required this.controller,
-    this.height = 60,
-    this.quality = 10,
-  });
+  ThumbnailSlider(
+      {required this.controller,
+      this.height = 60,
+      this.quality = 10,
+      required this.type});
 
   ///MAX QUALITY IS 100 - MIN QUALITY IS 0
   final int quality;
@@ -21,6 +23,8 @@ class ThumbnailSlider extends StatefulWidget {
   final double height;
 
   final VideoEditorController controller;
+
+  final ThumbnailType type;
 
   @override
   _ThumbnailSliderState createState() => _ThumbnailSliderState();
@@ -36,12 +40,18 @@ class _ThumbnailSliderState extends State<ThumbnailSlider> {
   int _thumbnails = 8;
 
   Size _layout = Size.zero;
-  Stream<List<Uint8List>>? _stream;
+  ValueNotifier<Stream<List<Uint8List>>> _stream =
+      ValueNotifier<Stream<List<Uint8List>>>(Stream.empty());
+
+  Duration? _trimStart;
+  Duration? _trimEnd;
 
   @override
   void initState() {
     super.initState();
     _aspect = widget.controller.video.value.aspectRatio;
+    _trimStart = widget.controller.startTrim;
+    _trimEnd = widget.controller.endTrim;
     widget.controller.addListener(_scaleRect);
     super.initState();
   }
@@ -61,9 +71,17 @@ class _ThumbnailSliderState extends State<ThumbnailSlider> {
       _layout,
       widget.controller,
     );
+
+    ///change cover thumbnails when trim values changed
+    if (widget.type == ThumbnailType.cover &&
+        !widget.controller.isTrimming &&
+        (_trimStart != widget.controller.startTrim ||
+            _trimEnd != widget.controller.endTrim)) {
+      _stream.value = _generateCoverThumbnails();
+    }
   }
 
-  Stream<List<Uint8List>> _generateThumbnails() async* {
+  Stream<List<Uint8List>> _generateTrimThumbnails() async* {
     final String path = widget.controller.file.path;
     final int duration = widget.controller.video.value.duration.inMilliseconds;
     final double eachPart = duration / _thumbnails;
@@ -73,6 +91,36 @@ class _ThumbnailSliderState extends State<ThumbnailSlider> {
         imageFormat: ImageFormat.JPEG,
         video: path,
         timeMs: (eachPart * i).toInt(),
+        quality: widget.quality,
+      );
+      if (_bytes != null) {
+        _byteList.add(_bytes);
+      }
+
+      yield _byteList;
+    }
+  }
+
+  Stream<List<Uint8List>> _generateCoverThumbnails() async* {
+    final String path = widget.controller.file.path;
+
+    final int duration = widget.controller.isTrimmmed
+        ? (widget.controller.endTrim - widget.controller.startTrim)
+            .inMilliseconds
+        : widget.controller.videoDuration.inMilliseconds;
+
+    final double eachPart = duration / _thumbnails;
+
+    List<Uint8List> _byteList = [];
+
+    for (int i = 1; i <= _thumbnails; i++) {
+      Uint8List? _bytes = await VideoThumbnail.thumbnailData(
+        imageFormat: ImageFormat.JPEG,
+        video: path,
+        timeMs: (widget.controller.isTrimmmed
+                ? (eachPart * i) + widget.controller.startTrim.inMilliseconds
+                : (eachPart * i))
+            .toInt(),
         quality: widget.quality,
       );
       if (_bytes != null) {
@@ -108,55 +156,61 @@ class _ThumbnailSliderState extends State<ThumbnailSlider> {
             ? Size(widget.height * _aspect, widget.height)
             : Size(widget.height, widget.height / _aspect);
         _thumbnails = (_width ~/ _layout.width) + 1;
-        _stream = _generateThumbnails();
+        _stream.value = widget.type == ThumbnailType.trim
+            ? _generateTrimThumbnails()
+            : _generateCoverThumbnails();
         _rect.value = _calculateTrimRect();
       }
 
-      return StreamBuilder(
-        stream: _stream,
-        builder: (_, AsyncSnapshot<List<Uint8List>> snapshot) {
-          final data = snapshot.data;
-          return snapshot.hasData
-              ? ListView.builder(
-                  scrollDirection: Axis.horizontal,
-                  padding: EdgeInsets.zero,
-                  physics: NeverScrollableScrollPhysics(),
-                  itemCount: data!.length,
-                  itemBuilder: (_, int index) {
-                    return ValueListenableBuilder(
-                      valueListenable: _transform,
-                      builder: (_, TransformData transform, __) {
-                        return CropTransform(
-                          transform: transform,
-                          child: Container(
-                            alignment: Alignment.center,
-                            height: _layout.height,
-                            width: _layout.width,
-                            child: Stack(children: [
-                              Image(
-                                image: MemoryImage(data[index]),
-                                width: _layout.width,
-                                height: _layout.height,
-                                alignment: Alignment.topLeft,
-                              ),
-                              CustomPaint(
-                                size: _layout,
-                                painter: CropGridPainter(
-                                  _rect.value,
-                                  showGrid: false,
-                                  style: widget.controller.cropStyle,
+      return ValueListenableBuilder(
+          valueListenable: _stream,
+          builder: (_, Stream<List<Uint8List>> stream, __) {
+            return StreamBuilder(
+              stream: stream,
+              builder: (_, AsyncSnapshot<List<Uint8List>> snapshot) {
+                final data = snapshot.data;
+                return snapshot.hasData
+                    ? ListView.builder(
+                        scrollDirection: Axis.horizontal,
+                        padding: EdgeInsets.zero,
+                        physics: NeverScrollableScrollPhysics(),
+                        itemCount: data!.length,
+                        itemBuilder: (_, int index) {
+                          return ValueListenableBuilder(
+                            valueListenable: _transform,
+                            builder: (_, TransformData transform, __) {
+                              return CropTransform(
+                                transform: transform,
+                                child: Container(
+                                  alignment: Alignment.center,
+                                  height: _layout.height,
+                                  width: _layout.width,
+                                  child: Stack(children: [
+                                    Image(
+                                      image: MemoryImage(data[index]),
+                                      width: _layout.width,
+                                      height: _layout.height,
+                                      alignment: Alignment.topLeft,
+                                    ),
+                                    CustomPaint(
+                                      size: _layout,
+                                      painter: CropGridPainter(
+                                        _rect.value,
+                                        showGrid: false,
+                                        style: widget.controller.cropStyle,
+                                      ),
+                                    ),
+                                  ]),
                                 ),
-                              ),
-                            ]),
-                          ),
-                        );
-                      },
-                    );
-                  },
-                )
-              : SizedBox();
-        },
-      );
+                              );
+                            },
+                          );
+                        },
+                      )
+                    : SizedBox();
+              },
+            );
+          });
     });
   }
 }

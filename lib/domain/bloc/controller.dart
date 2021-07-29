@@ -142,6 +142,12 @@ class VideoEditorController extends ChangeNotifier {
     }
   }
 
+  ///The **startTrim**
+  Duration get startTrim => _trimStart;
+
+  ///The **endTrim**
+  Duration get endTrim => _trimEnd;
+
   ///The **TopLeft Offset** (Range is `Offset(0.0, 0.0)` to `Offset(1.0, 1.0)`).
   Offset get minCrop => _minCrop;
   set minCrop(Offset value) {

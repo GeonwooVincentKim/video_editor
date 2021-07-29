@@ -243,7 +243,8 @@ class _TrimSliderState extends State<TrimSlider>
                           child: ThumbnailSlider(
                               controller: widget.controller,
                               height: widget.height,
-                              quality: widget.quality)))),
+                              quality: widget.quality,
+                              type: ThumbnailType.trim)))),
               onNotification: (notification) {
                 _boundary.value = _TrimBoundaries.inside;
                 _updateControllerIsTrimming(true);

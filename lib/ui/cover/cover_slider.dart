@@ -148,7 +148,8 @@ class _CoverSliderState extends State<CoverSlider>
           ThumbnailSlider(
               controller: widget.controller,
               height: widget.height,
-              quality: widget.quality),
+              quality: widget.quality,
+              type: ThumbnailType.cover),
           AnimatedBuilder(
             animation: Listenable.merge([widget.controller, _controller]),
             builder: (_, __) {
