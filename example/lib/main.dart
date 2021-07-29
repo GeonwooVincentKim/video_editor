@@ -137,7 +137,52 @@ class _VideoEditorState extends State<VideoEditor> {
                     showGrid: false,
                   ),
                 ),
-                ..._trimSlider(),
+                Container(
+                    height: 200,
+                    margin: Margin.top(10),
+                    child: DefaultTabController(
+                      length: 2,
+                      child: Column(children: [
+                        TabBar(
+                          indicatorColor: Colors.white,
+                          tabs: [
+                            Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Padding(
+                                      padding: Margin.all(5),
+                                      child: Icon(Icons.content_cut)),
+                                  Text('Trim',
+                                      style: TextStyle(color: Colors.white))
+                                ]),
+                            Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Padding(
+                                      padding: Margin.all(5),
+                                      child: Icon(Icons.video_label)),
+                                  Text('Cover',
+                                      style: TextStyle(color: Colors.white))
+                                ]),
+                          ],
+                        ),
+                        Expanded(
+                          child: TabBarView(
+                            children: [
+                              Container(
+                                  child: Column(
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.center,
+                                      children: _trimSlider())),
+                              Container(
+                                child: Text('Cover Widget in progress...',
+                                    style: TextStyle(color: Colors.white)),
+                              ),
+                            ],
+                          ),
+                        )
+                      ]),
+                    ))
               ]),
               Center(
                 child: AnimatedBuilder(
