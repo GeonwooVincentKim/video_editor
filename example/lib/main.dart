@@ -132,11 +132,30 @@ class _VideoEditorState extends State<VideoEditor> {
               Column(children: [
                 _topNavBar(),
                 Expanded(
-                  child: CropGridViewer(
+                    child: Stack(alignment: Alignment.center, children: [
+                  CropGridViewer(
                     controller: _controller,
                     showGrid: false,
                   ),
-                ),
+                  AnimatedBuilder(
+                    animation: _controller.video,
+                    builder: (_, __) => OpacityTransition(
+                      visible: !_controller.isPlaying,
+                      child: GestureDetector(
+                        onTap: _controller.video.play,
+                        child: Container(
+                          width: 40,
+                          height: 40,
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            shape: BoxShape.circle,
+                          ),
+                          child: Icon(Icons.play_arrow),
+                        ),
+                      ),
+                    ),
+                  ),
+                ])),
                 Container(
                     height: 200,
                     margin: Margin.top(10),
@@ -175,8 +194,9 @@ class _VideoEditorState extends State<VideoEditor> {
                                           MainAxisAlignment.center,
                                       children: _trimSlider())),
                               Container(
-                                child: Text('Cover Widget in progress...',
-                                    style: TextStyle(color: Colors.white)),
+                                child: Column(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [_coverSlider()]),
                               ),
                             ],
                           ),
@@ -184,26 +204,6 @@ class _VideoEditorState extends State<VideoEditor> {
                       ]),
                     ))
               ]),
-              Center(
-                child: AnimatedBuilder(
-                  animation: _controller.video,
-                  builder: (_, __) => OpacityTransition(
-                    visible: !_controller.isPlaying,
-                    child: GestureDetector(
-                      onTap: _controller.video.play,
-                      child: Container(
-                        width: 40,
-                        height: 40,
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          shape: BoxShape.circle,
-                        ),
-                        child: Icon(Icons.play_arrow),
-                      ),
-                    ),
-                  ),
-                ),
-              ),
               _customSnackBar(),
               ValueListenableBuilder(
                 valueListenable: _isExporting,
@@ -312,6 +312,16 @@ class _VideoEditorState extends State<VideoEditor> {
             horizontalMargin: height / 4),
       )
     ];
+  }
+
+  Widget _coverSlider() {
+    return Container(
+        height: height,
+        margin: Margin.horizontal(height / 4),
+        child: CoverSlider(
+          controller: _controller,
+          height: height,
+        ));
   }
 
   Widget _customSnackBar() {
