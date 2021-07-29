@@ -26,8 +26,7 @@ class CoverSlider extends StatefulWidget {
   _CoverSliderState createState() => _CoverSliderState();
 }
 
-class _CoverSliderState extends State<CoverSlider>
-    with AutomaticKeepAliveClientMixin<CoverSlider> {
+class _CoverSliderState extends State<CoverSlider> {
   Rect _rect = Rect.zero;
   double _rectWidth = 0.0;
   Size _layout = Size.zero;
@@ -38,18 +37,14 @@ class _CoverSliderState extends State<CoverSlider>
     _rectWidth = widget.height;
     _controller = widget.controller.video;
     widget.controller.defaultCover = false;
+    _controller.pause();
     super.initState();
   }
-
-  @override
-  bool get wantKeepAlive => true;
 
   //--------//
   //GESTURES//
   //--------//
   void _onHorizontalDragStart(DragStartDetails details) {
-    _controller.pause();
-
     final double margin = 25.0;
     final double pos = details.localPosition.dx;
     final double max = _rect.right;
@@ -110,7 +105,6 @@ class _CoverSliderState extends State<CoverSlider>
   //MISC//
   //----//
   void _controllerSeekToCoverPos() {
-    print('cover time = ${widget.controller.coverTime()}');
     _controller.seekTo(widget.controller
         .coverTime()); // TODO FIX: video_player iOS bug to seek video while paused (https://github.com/flutter/flutter/issues/80054)
   }
@@ -131,7 +125,6 @@ class _CoverSliderState extends State<CoverSlider>
 
   @override
   Widget build(BuildContext context) {
-    super.build(context);
     return LayoutBuilder(builder: (_, contrainst) {
       final Size layout = Size(contrainst.maxWidth, contrainst.maxHeight);
       if (_layout != layout) {

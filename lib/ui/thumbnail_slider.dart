@@ -40,18 +40,12 @@ class _ThumbnailSliderState extends State<ThumbnailSlider> {
   int _thumbnails = 8;
 
   Size _layout = Size.zero;
-  ValueNotifier<Stream<List<Uint8List>>> _stream =
-      ValueNotifier<Stream<List<Uint8List>>>(Stream.empty());
-
-  Duration? _trimStart;
-  Duration? _trimEnd;
+  Stream<List<Uint8List>>? _stream;
 
   @override
   void initState() {
     super.initState();
     _aspect = widget.controller.video.value.aspectRatio;
-    _trimStart = widget.controller.startTrim;
-    _trimEnd = widget.controller.endTrim;
     widget.controller.addListener(_scaleRect);
     super.initState();
   }
@@ -71,14 +65,6 @@ class _ThumbnailSliderState extends State<ThumbnailSlider> {
       _layout,
       widget.controller,
     );
-
-    ///change cover thumbnails when trim values changed
-    if (widget.type == ThumbnailType.cover &&
-        !widget.controller.isTrimming &&
-        (_trimStart != widget.controller.startTrim ||
-            _trimEnd != widget.controller.endTrim)) {
-      _stream.value = _generateCoverThumbnails();
-    }
   }
 
   Stream<List<Uint8List>> _generateTrimThumbnails() async* {
@@ -156,61 +142,57 @@ class _ThumbnailSliderState extends State<ThumbnailSlider> {
             ? Size(widget.height * _aspect, widget.height)
             : Size(widget.height, widget.height / _aspect);
         _thumbnails = (_width ~/ _layout.width) + 1;
-        _stream.value = widget.type == ThumbnailType.trim
+        _stream = widget.type == ThumbnailType.trim
             ? _generateTrimThumbnails()
             : _generateCoverThumbnails();
         _rect.value = _calculateTrimRect();
       }
 
-      return ValueListenableBuilder(
-          valueListenable: _stream,
-          builder: (_, Stream<List<Uint8List>> stream, __) {
-            return StreamBuilder(
-              stream: stream,
-              builder: (_, AsyncSnapshot<List<Uint8List>> snapshot) {
-                final data = snapshot.data;
-                return snapshot.hasData
-                    ? ListView.builder(
-                        scrollDirection: Axis.horizontal,
-                        padding: EdgeInsets.zero,
-                        physics: NeverScrollableScrollPhysics(),
-                        itemCount: data!.length,
-                        itemBuilder: (_, int index) {
-                          return ValueListenableBuilder(
-                            valueListenable: _transform,
-                            builder: (_, TransformData transform, __) {
-                              return CropTransform(
-                                transform: transform,
-                                child: Container(
-                                  alignment: Alignment.center,
-                                  height: _layout.height,
-                                  width: _layout.width,
-                                  child: Stack(children: [
-                                    Image(
-                                      image: MemoryImage(data[index]),
-                                      width: _layout.width,
-                                      height: _layout.height,
-                                      alignment: Alignment.topLeft,
-                                    ),
-                                    CustomPaint(
-                                      size: _layout,
-                                      painter: CropGridPainter(
-                                        _rect.value,
-                                        showGrid: false,
-                                        style: widget.controller.cropStyle,
-                                      ),
-                                    ),
-                                  ]),
+      return StreamBuilder(
+        stream: _stream,
+        builder: (_, AsyncSnapshot<List<Uint8List>> snapshot) {
+          final data = snapshot.data;
+          return snapshot.hasData
+              ? ListView.builder(
+                  scrollDirection: Axis.horizontal,
+                  padding: EdgeInsets.zero,
+                  physics: NeverScrollableScrollPhysics(),
+                  itemCount: data!.length,
+                  itemBuilder: (_, int index) {
+                    return ValueListenableBuilder(
+                      valueListenable: _transform,
+                      builder: (_, TransformData transform, __) {
+                        return CropTransform(
+                          transform: transform,
+                          child: Container(
+                            alignment: Alignment.center,
+                            height: _layout.height,
+                            width: _layout.width,
+                            child: Stack(children: [
+                              Image(
+                                image: MemoryImage(data[index]),
+                                width: _layout.width,
+                                height: _layout.height,
+                                alignment: Alignment.topLeft,
+                              ),
+                              CustomPaint(
+                                size: _layout,
+                                painter: CropGridPainter(
+                                  _rect.value,
+                                  showGrid: false,
+                                  style: widget.controller.cropStyle,
                                 ),
-                              );
-                            },
-                          );
-                        },
-                      )
-                    : SizedBox();
-              },
-            );
-          });
+                              ),
+                            ]),
+                          ),
+                        );
+                      },
+                    );
+                  },
+                )
+              : SizedBox();
+        },
+      );
     });
   }
 }
