@@ -104,9 +104,15 @@ class _CoverSliderState extends State<CoverSlider> {
   //----//
   //MISC//
   //----//
-  void _controllerSeekToCoverPos() {
-    _controller.seekTo(widget.controller
-        .coverTime()); // TODO FIX: video_player iOS bug to seek video while paused (https://github.com/flutter/flutter/issues/80054)
+  void _controllerSeekToCoverPos() async {
+    if (!_controller.value.isBuffering) {
+      await _controller.play();
+      await _controller.seekTo(widget.controller.coverTime());
+      // TODO FIX: video_player iOS bug to seek video while paused (https://github.com/flutter/flutter/issues/80054)
+      Future.delayed(Duration(milliseconds: 500), () async {
+        await _controller.pause();
+      });
+    }
   }
 
   void _updateControllerCover() {
