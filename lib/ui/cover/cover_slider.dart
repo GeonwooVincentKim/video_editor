@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:video_player/video_player.dart';
 import 'package:video_editor/domain/bloc/controller.dart';
-import 'package:video_editor/ui/trim/thumbnail_slider.dart';
+import 'package:video_editor/ui/thumbnail_slider.dart';
 import 'package:video_editor/ui/cover/cover_slider_painter.dart';
 
 class CoverSlider extends StatefulWidget {
