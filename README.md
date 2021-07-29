@@ -10,8 +10,11 @@
   - [x] see previous and next thumbnails out of the padding area
 - [ ] video timeline along the trimmer
 - [ ] new style of trimmer
-- [ ] add possibility to select a frame of the video as the cover
-  - [ ] try to select the cover using the seek position of the video player [#61004](https://github.com/flutter/flutter/issues/61004)
+- [x] add possibility to select a frame of the video as the cover
+  - [x] select cover betweeen `_trimStart` and `_trimEnd`
+  - [ ] update thumbnails in `CoverSlider` after trimming values changed
+  - [ ] display the selected cover using the seek position of the video player [#61004](https://github.com/flutter/flutter/issues/61004),[#80054](https://github.com/flutter/flutter/issues/80054)
+  - [ ] export function of the selected cover image
 
 ### Fix bugs
 

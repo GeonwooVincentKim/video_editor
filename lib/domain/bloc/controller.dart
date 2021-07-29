@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'package:path/path.dart' as path;
 import 'package:flutter/material.dart';
+import 'package:video_editor/domain/entities/cover_style.dart';
 import 'package:video_player/video_player.dart';
 import 'package:flutter_ffmpeg/statistics.dart';
 import 'package:path_provider/path_provider.dart';
@@ -42,6 +43,9 @@ class VideoEditorController extends ChangeNotifier {
   ///Style for [TrimSlider]
   final TrimSliderStyle trimStyle;
 
+  ///Style for [CoverSlider]
+  final CoverSliderStyle coverStyle;
+
   ///Style for [CropGridViewer]
   final CropGridStyle cropStyle;
 
@@ -52,11 +56,15 @@ class VideoEditorController extends ChangeNotifier {
   VideoEditorController.file(
     this.file, {
     Duration? maxDuration,
+    Duration? defaultCoverTime,
     TrimSliderStyle? trimStyle,
+    CoverSliderStyle? coverStyle,
     CropGridStyle? cropStyle,
   })  : _video = VideoPlayerController.file(file),
         this._maxDuration = maxDuration ?? Duration.zero,
+        this._defaultCoverTime = defaultCoverTime ?? Duration.zero,
         this.cropStyle = cropStyle ?? CropGridStyle(),
+        this.coverStyle = coverStyle ?? CoverSliderStyle(),
         this.trimStyle = trimStyle ?? TrimSliderStyle();
 
   FlutterFFmpeg _ffmpeg = FlutterFFmpeg();
@@ -64,7 +72,9 @@ class VideoEditorController extends ChangeNotifier {
 
   int _rotation = 0;
   bool isTrimming = false;
+  bool _isTrimmed = false;
   bool isCropping = false;
+  bool isCovering = false;
 
   double? _preferredCropAspectRatio;
 
@@ -83,6 +93,11 @@ class VideoEditorController extends ChangeNotifier {
 
   ///The max duration that can be trim video.
   Duration _maxDuration;
+
+  //Cover parameters
+  bool defaultCover = true;
+  Duration _defaultCoverTime;
+  double _coverPos = 0.0;
 
   int _videoWidth = 0;
   int _videoHeight = 0;
@@ -253,8 +268,17 @@ class VideoEditorController extends ChangeNotifier {
     final duration = videoDuration;
     _trimStart = duration * minTrim;
     _trimEnd = duration * maxTrim;
+
+    if (_trimStart != Duration.zero || _trimEnd != videoDuration)
+      _isTrimmed = true;
+    else
+      _isTrimmed = false;
+
     notifyListeners();
   }
+
+  ///Get if the **isTrimmed**
+  bool get isTrimmmed => _isTrimmed;
 
   ///Get the **maxDuration**
   Duration get maxDuration => _maxDuration;
@@ -262,6 +286,38 @@ class VideoEditorController extends ChangeNotifier {
   ///Get the **VideoPosition** (Range is `0.0` to `1.0`).
   double get trimPosition =>
       videoPosition.inMilliseconds / videoDuration.inMilliseconds;
+
+  //-----------//
+  //VIDEO COVER//
+  //-----------//
+  ///Update coverPos. Argument range are `0.0` to `1.0`.
+  void updateCover(double coverPos) {
+    defaultCover = false;
+    _coverPos = coverPos;
+    notifyListeners();
+  }
+
+  ///Return the position of the cover in Duration format on all the video (no cover selection)
+  Duration coverTime() {
+    if (defaultCover) {
+      final trimmedCoverTime =
+          _trimStart > Duration.zero ? _trimStart : _defaultCoverTime;
+      if (videoDuration > trimmedCoverTime)
+        return trimmedCoverTime;
+      else
+        return videoDuration;
+    }
+
+    return new Duration(
+        milliseconds: (isTrimmmed
+                ? ((_trimEnd - _trimStart).inMilliseconds * _coverPos) +
+                    _trimStart.inMilliseconds
+                : videoDuration.inMilliseconds * _coverPos)
+            .toInt());
+  }
+
+  ///Get the **coverPosition**
+  double get coverPosition => _coverPos;
 
   //------------//
   //VIDEO ROTATE//
